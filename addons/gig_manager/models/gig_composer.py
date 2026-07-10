@@ -32,6 +32,12 @@ class GigComposer(models.Model):
                     "%(name)s cannot have a date of death earlier than their date of birth."
                 ) % {'name': composer.full_name})
     
+    @api.depends('full_name')
     def _compute_display_name(self):
+        # Without this @api.depends, display_name's cached value survives a
+        # write to full_name within the same transaction (it's a non-stored
+        # computed field, and Odoo only invalidates the cache for fields
+        # declared as dependencies) - stale labels in breadcrumbs/many2ones
+        # until the next request. Declaring the dependency fixes that.
         for composer in self:
             composer.display_name = composer.full_name

@@ -66,7 +66,15 @@ class GigProject(models.Model):
             project.start_date = min(rehearsal_dates) if rehearsal_dates else False
             project.end_date = max(concert_dates) if concert_dates else False
 
+    @api.depends('attendance_ids')
     def _compute_attendance_count(self):
+        # search_count() re-reads the DB every call, but the *cached result*
+        # of this compute is only invalidated when a listed dependency
+        # changes. attendance_ids is the real O2M behind those attendance
+        # rows, so depending on it keeps the badge accurate right after
+        # write() (below) creates new attendance lines in the same
+        # transaction - without this, the count would look stale until the
+        # next request re-triggers the compute from scratch.
         for project in self:
             project.attendance_count = self.env['gig.attendance'].search_count(
                 [('project_id', '=', project.id)]

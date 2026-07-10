@@ -61,9 +61,13 @@ class GigEvent(models.Model):
             if event.end_time <= event.start_time:
                 raise ValidationError(_("The end time must be after the start time"))
         
+    @api.depends('event_type', 'name', 'event_date')
     def _compute_display_name(self):
         """Odoo 17+: override this method (instead of the old name_get())
         to control how a record is labeled in Many2one widgets, breadcrumbs, etc."""
+        # @api.depends must list every field read below (event_type, name,
+        # event_date) - without it the cached display_name doesn't get
+        # invalidated when those fields change within the same transaction.
         for event in self:
             date_str = event.event_date or _("no date")
             if event.event_type == 'rehearsal':
