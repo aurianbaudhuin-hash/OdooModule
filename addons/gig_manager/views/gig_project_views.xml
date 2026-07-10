@@ -17,6 +17,11 @@
         <field name="arch" type="xml">
             <form>
                 <sheet>
+                    <!-- Complements, doesn't duplicate, the "Attendance" notebook page
+                         below: this button opens the standalone gig.attendance list
+                         (grouped by event, with Present/Absent/Uncertain filters) for a
+                         richer cross-event view, while the notebook page is for quick
+                         inline edits without leaving this form. -->
                     <div class="oe_button_box" name="button_box">
                         <button type="object" name="action_view_attendance"
                                 class="oe_stat_button" icon="fa-users">
@@ -47,6 +52,12 @@
                         <page string="Participants" name="participants">
                             <field name="participant_ids" widget="many2many_tags"/>
                         </page>
+                        <!-- gig.attendance.project_id is a related/store field derived
+                             from event_id.project_id, not a directly-settable one - so
+                             the domain below is what actually stops a user from picking
+                             an event that belongs to a different project. Without it,
+                             a new row here could silently end up filed under that other
+                             project once event_id is saved. -->
                         <page string="Attendance" name="attendance">
                             <field name="attendance_ids">
                                 <list editable="bottom">

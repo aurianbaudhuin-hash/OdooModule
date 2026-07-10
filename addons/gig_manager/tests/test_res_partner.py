@@ -1,3 +1,9 @@
+"""Tests for the res.partner extension: instrument_ids, gig_project_ids
+and gig_attendance_ids are all pure inverses of relations defined
+elsewhere in this module, so these tests verify each one stays correctly
+in sync with its "other side" rather than testing any logic that lives
+in res_partner.py itself (there isn't any).
+"""
 from odoo import Command
 from odoo.tests.common import TransactionCase, tagged
 

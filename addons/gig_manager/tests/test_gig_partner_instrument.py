@@ -1,3 +1,7 @@
+"""Tests for gig.partner.instrument: the unique(partner_id, instrument_id)
+constraint, and the deliberate ondelete asymmetry between partner_id
+(cascade) and instrument_id (restrict).
+"""
 import psycopg2
 
 from odoo.tests.common import TransactionCase, tagged

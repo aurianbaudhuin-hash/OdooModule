@@ -1,3 +1,9 @@
+"""Tests for gig.piece: the composition_year-vs-composer-lifespan
+constraint (including the falsy-0 edge case pinned as documented
+behaviour, not fixed), and display_name (both the composer/no-composer
+rendering and the correct recompute-after-write, contrasted against the
+buggy composer/event display_name computes tested elsewhere).
+"""
 from odoo.exceptions import ValidationError
 from odoo.tests.common import TransactionCase, tagged
 

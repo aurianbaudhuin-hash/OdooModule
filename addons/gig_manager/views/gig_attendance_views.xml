@@ -33,6 +33,14 @@
         </field>
     </record>
 
+    <!-- Reached two ways: the top-level "Attendance" menu (unscoped, every
+         project) and gig.project's action_view_attendance smart button
+         (same action, with a project_id domain layered on top). Defaults
+         to grouped-by-event since that's the more natural read for "who's
+         coming to this rehearsal/concert" than a flat list of rows.
+         view_mode is list-only - there's no dedicated form view for a
+         single attendance row, since editing happens inline wherever this
+         list is embedded. -->
     <record id="action_gig_attendance" model="ir.actions.act_window">
         <field name="name">Attendance</field>
         <field name="res_model">gig.attendance</field>

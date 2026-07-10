@@ -1,3 +1,9 @@
+"""Tests for gig.project: the start_date/end_date compute, the
+attendance_count compute (including the recompute-after-write regression
+test for the previously-missing @api.depends), action_view_attendance's
+returned action dict, the write() override that auto-creates attendance
+rows for newly-added participants, and a non-admin ACL sanity check.
+"""
 from odoo import Command
 from odoo.tests.common import TransactionCase, new_test_user, tagged
 

@@ -24,6 +24,12 @@
                     <group>
                         <group>
                             <field name="event_type"/>
+                            <!-- This invisible is UX only (hides the field once it's
+                                 pointless to fill in); the actual guarantee that a
+                                 rehearsal never has a name is the model-level
+                                 _check_name_by_type constraint, which still fires even
+                                 if a record is written through code that bypasses this
+                                 view entirely. -->
                             <field name="name" invisible="event_type == 'rehearsal'"/>
                             <field name="project_id"/>
                         </group>

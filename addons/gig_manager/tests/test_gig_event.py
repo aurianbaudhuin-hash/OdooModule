@@ -1,3 +1,9 @@
+"""Tests for gig.event: the rehearsal-cannot-have-a-name constraint, the
+start/end time bounds constraint, the _onchange_event_type name-clearing
+behaviour (exercised via Form, not by calling the method directly),
+display_name for both event types, and the cascade-delete from
+gig.project.
+"""
 from datetime import date
 
 from odoo.exceptions import ValidationError

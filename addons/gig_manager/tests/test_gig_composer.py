@@ -1,3 +1,8 @@
+"""Tests for gig.composer: the birth/death date ordering constraint,
+display_name (including the recompute-after-write regression test for
+the previously-missing @api.depends), and the restrict-delete guarantee
+on gig.piece.composer_id.
+"""
 import psycopg2
 
 from odoo.exceptions import ValidationError

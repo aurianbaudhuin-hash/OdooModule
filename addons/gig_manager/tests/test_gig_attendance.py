@@ -1,3 +1,8 @@
+"""Tests for gig.attendance: the unique(partner_id, event_id) constraint,
+the default 'maybe' status, the related/store project_id field (both at
+creation and after moving the row to a different event), and cascade
+deletes from either side (partner_id, event_id).
+"""
 import psycopg2
 
 from odoo.tests.common import TransactionCase, tagged

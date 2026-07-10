@@ -14,6 +14,12 @@
                             </list>
                         </field>
                     </group>
+                    <!-- readonly here on purpose: this is the same pivot table as
+                         gig.project.participant_ids (see res_partner.py), so editing
+                         it from both sides would just be two divergent paths to the
+                         same data. This tab is for *seeing* which projects a contact
+                         is on; adding/removing participants happens on the project's
+                         own "Participants" tab. -->
                     <group string="Projects">
                         <field name="gig_project_ids" nolabel="1" widget="many2many_tags" readonly="1"/>
                     </group>
