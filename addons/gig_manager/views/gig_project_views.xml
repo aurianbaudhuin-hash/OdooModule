@@ -17,6 +17,12 @@
         <field name="arch" type="xml">
             <form>
                 <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button type="object" name="action_view_attendance"
+                                class="oe_stat_button" icon="fa-users">
+                            <field name="attendance_count" widget="statinfo" string="Attendance"/>
+                        </button>
+                    </div>
                     <group>
                         <field name="name"/>
                         <field name="start_date"/>
@@ -40,6 +46,16 @@
                         </page>
                         <page string="Participants" name="participants">
                             <field name="participant_ids" widget="many2many_tags"/>
+                        </page>
+                        <page string="Attendance" name="attendance">
+                            <field name="attendance_ids">
+                                <list editable="bottom">
+                                    <field name="event_id" domain="[('project_id', '=', parent.id)]"/>
+                                    <field name="partner_id"/>
+                                    <field name="status"/>
+                                    <field name="comment"/>
+                                </list>
+                            </field>
                         </page>
                     </notebook>
                 </sheet>

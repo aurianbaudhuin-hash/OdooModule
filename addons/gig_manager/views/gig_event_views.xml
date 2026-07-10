@@ -37,6 +37,17 @@
                     <group>
                         <field name="notes" placeholder="Any comment about this event..."/>
                     </group>
+                    <notebook>
+                        <page string="Attendance" name="attendance">
+                            <field name="attendance_ids">
+                                <list editable="bottom">
+                                    <field name="partner_id"/>
+                                    <field name="status"/>
+                                    <field name="comment"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
                 </sheet>
             </form>
         </field>

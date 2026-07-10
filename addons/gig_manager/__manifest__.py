@@ -22,6 +22,7 @@ instrument, at which level, on which project.
         'views/gig_piece_views.xml',
         'views/gig_project_views.xml',
         'views/gig_event_views.xml',
+        'views/gig_attendance_views.xml',
         'views/res_partner_views.xml',
         'views/gig_menus.xml',
     ],

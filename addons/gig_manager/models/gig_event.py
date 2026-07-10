@@ -29,6 +29,12 @@ class GigEvent(models.Model):
         required=True,
         ondelete='cascade',
         )
+    attendance_ids = fields.One2many(
+        comodel_name='gig.attendance',
+        inverse_name='event_id',
+        string="Attendances",
+    )
+       
     @api.onchange('event_type')
     def _onchange_event_type(self):
         """Clear the name as soon as the user switches to 'rehearsal',

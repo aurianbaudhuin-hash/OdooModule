@@ -6,4 +6,5 @@ from . import gig_piece
 from . import gig_event
 from . import gig_project
 from . import gig_partner_instrument
+from . import gig_attendance
 from . import res_partner

@@ -1,0 +1,42 @@
+<odoo>
+    <record id="view_gig_attendance_list" model="ir.ui.view">
+        <field name="name">gig.attendance.list</field>
+        <field name="model">gig.attendance</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="project_id"/>
+                <field name="event_id"/>
+                <field name="partner_id"/>
+                <field name="status"/>
+                <field name="comment"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_gig_attendance_search" model="ir.ui.view">
+        <field name="name">gig.attendance.search</field>
+        <field name="model">gig.attendance</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="project_id"/>
+                <field name="event_id"/>
+                <field name="partner_id"/>
+                <filter string="Present" name="filter_present" domain="[('status', '=', 'present')]"/>
+                <filter string="Absent" name="filter_absent" domain="[('status', '=', 'absent')]"/>
+                <filter string="Uncertain" name="filter_maybe" domain="[('status', '=', 'maybe')]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Project" name="group_project" context="{'group_by': 'project_id'}"/>
+                    <filter string="Event" name="group_event" context="{'group_by': 'event_id'}"/>
+                    <filter string="Musician" name="group_partner" context="{'group_by': 'partner_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_gig_attendance" model="ir.actions.act_window">
+        <field name="name">Attendance</field>
+        <field name="res_model">gig.attendance</field>
+        <field name="view_mode">list</field>
+        <field name="context">{'search_default_group_event': 1}</field>
+    </record>
+</odoo>

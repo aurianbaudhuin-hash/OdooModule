@@ -18,6 +18,15 @@
                         <field name="gig_project_ids" nolabel="1" widget="many2many_tags" readonly="1"/>
                     </group>
                 </page>
+                <page string="Rehearsal Attendance" name="gig_attendance">
+                    <field name="gig_attendance_ids" nolabel="1">
+                        <list editable="bottom">
+                            <field name="event_id"/>
+                            <field name="status"/>
+                            <field name="comment"/>
+                        </list>
+                    </field>
+                </page>
             </notebook>
         </field>
     </record>

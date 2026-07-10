@@ -7,3 +7,4 @@ access_gig_movement,gig.movement,model_gig_movement,base.group_user,1,1,1,1
 access_gig_composer,gig.composer,model_gig_composer,base.group_user,1,1,1,1
 access_gig_piece,gig.piece,model_gig_piece,base.group_user,1,1,1,1
 access_gig_partner_instrument,gig.partner.instrument,model_gig_partner_instrument,base.group_user,1,1,1,1
+access_gig_attendance,gig.attendance,model_gig_attendance,base.group_user,1,1,1,1
