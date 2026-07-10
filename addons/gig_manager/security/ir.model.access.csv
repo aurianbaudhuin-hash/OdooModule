@@ -1,3 +1,9 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_gig_project,gig.project,model_gig_project,,1,1,1,1
-access_gig_event,gig.event,model_gig_event,,1,1,1,1
+access_gig_project,gig.project,model_gig_project,base.group_user,1,1,1,1
+access_gig_event,gig.event,model_gig_event,base.group_user,1,1,1,1
+access_gig_instrument,gig.instrument,model_gig_instrument,base.group_user,1,1,1,1
+access_gig_piece_type,gig.piece.type,model_gig_piece_type,base.group_user,1,1,1,1
+access_gig_movement,gig.movement,model_gig_movement,base.group_user,1,1,1,1
+access_gig_composer,gig.composer,model_gig_composer,base.group_user,1,1,1,1
+access_gig_piece,gig.piece,model_gig_piece,base.group_user,1,1,1,1
+access_gig_partner_instrument,gig.partner.instrument,model_gig_partner_instrument,base.group_user,1,1,1,1

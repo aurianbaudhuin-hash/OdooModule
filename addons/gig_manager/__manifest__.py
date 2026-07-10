@@ -1,16 +1,30 @@
 {
-    'name': 'Gig Manager',
+    'name': "Gig Manager",
     'version': '1.0',
-    'summary': "Manage tours and their individual gigs",
-    'description': "Track touring projects, their gigs, venues and setlists.",
-    'author': 'Aurian Baudhuin',
-    'category': 'Services/Other',
-    'depends': ['base', 'mail'],
+    'summary': "Plan concerts and rehearsals for bands and orchestras",
+    'description': """
+Gig Manager
+===========
+Manage tours, concerts and rehearsals for bands and orchestras: plan events,
+build a programme of musical pieces, and track which contact plays which
+instrument, at which level, on which project.
+""",
+    'category': 'Productivity',
+    'author': "Aurian",
+    'license': 'LGPL-3',
+    'depends': ['base', 'contacts'],
     'data': [
         'security/ir.model.access.csv',
+        'views/gig_instrument_views.xml',
+        'views/gig_piece_type_views.xml',
+        'views/gig_movement_views.xml',
+        'views/gig_composer_views.xml',
+        'views/gig_piece_views.xml',
         'views/gig_project_views.xml',
         'views/gig_event_views.xml',
+        'views/res_partner_views.xml',
+        'views/gig_menus.xml',
     ],
-    'installable': True,
     'application': True,
+    'installable': True,
 }

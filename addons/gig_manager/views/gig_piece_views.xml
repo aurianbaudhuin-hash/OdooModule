@@ -1,0 +1,36 @@
+<odoo>
+    <record id="view_gig_piece_list" model="ir.ui.view">
+        <field name="name">gig.piece.list</field>
+        <field name="model">gig.piece</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="title"/>
+                <field name="composer_id"/>
+                <field name="piece_type_id"/>
+                <field name="composition_year"/>
+            </list>
+        </field>
+    </record>   
+    <record id="view_gig_piece_form" model="ir.ui.view">
+        <field name="name">gig.piece.form</field>
+        <field name="model">gig.piece</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="title"/>
+                        <field name="composer_id"/>
+                        <field name="piece_type_id"/>
+                        <field name="composition_year"/>
+                        <field name="catalog_number"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="action_gig_piece" model="ir.actions.act_window">
+        <field name="name">Pieces</field>
+        <field name="res_model">gig.piece</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

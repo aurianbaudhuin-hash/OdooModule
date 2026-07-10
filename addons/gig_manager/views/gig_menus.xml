@@ -1,0 +1,24 @@
+<odoo>
+    <menuitem id="menu_gig_root" name="Gig Manager"/>
+
+    <menuitem id="menu_gig_project" name="Tours"
+              parent="menu_gig_root" action="action_gig_project" sequence="10"/>
+    <menuitem id="menu_gig_event" name="Gigs"
+              parent="menu_gig_root" action="action_gig_event" sequence="20"/>
+
+    <menuitem id="menu_gig_programme" name="Programme"
+              parent="menu_gig_root" sequence="30"/>
+    <menuitem id="menu_gig_piece" name="Pieces"
+              parent="menu_gig_programme" action="action_gig_piece" sequence="10"/>
+    <menuitem id="menu_gig_composer" name="Composers"
+              parent="menu_gig_programme" action="action_gig_composer" sequence="20"/>
+
+    <menuitem id="menu_gig_configuration" name="Configuration"
+              parent="menu_gig_root" sequence="90"/>
+    <menuitem id="menu_gig_instrument" name="Instruments"
+              parent="menu_gig_configuration" action="action_gig_instrument" sequence="10"/>
+    <menuitem id="menu_gig_piece_type" name="Piece Types"
+              parent="menu_gig_configuration" action="action_gig_piece_type" sequence="20"/>
+    <menuitem id="menu_gig_movement" name="Artistic Movements"
+              parent="menu_gig_configuration" action="action_gig_movement" sequence="30"/>
+</odoo>

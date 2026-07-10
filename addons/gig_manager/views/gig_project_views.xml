@@ -23,13 +23,23 @@
                         <field name="end_date"/>
                     </group>
                     <notebook>
-                        <page string="Gigs">
+                        <page string="Events" name="events">
                             <field name="gig_ids">
                                 <list editable="bottom">
+                                    <field name="event_type"/>
                                     <field name="name"/>
                                     <field name="event_date"/>
+                                    <field name="start_time" widget="float_time"/>
+                                    <field name="end_time" widget="float_time"/>
+                                    <field name="location"/>
                                 </list>
                             </field>
+                        </page>
+                        <page string="Programme" name="programme">
+                            <field name="piece_ids" widget="many2many_tags"/>
+                        </page>
+                        <page string="Participants" name="participants">
+                            <field name="participant_ids" widget="many2many_tags"/>
                         </page>
                     </notebook>
                 </sheet>
@@ -42,8 +52,4 @@
         <field name="res_model">gig.project</field>
         <field name="view_mode">list,form</field>
     </record>
-
-    <menuitem id="menu_gig_root" name="Gig Manager"/>
-    <menuitem id="menu_gig_project" name="Tours"
-              parent="menu_gig_root" action="action_gig_project" sequence="10"/>
 </odoo>

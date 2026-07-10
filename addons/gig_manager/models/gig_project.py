@@ -17,24 +17,37 @@ class GigProject(models.Model):
         string="Start date",
         compute='_compute_dates',
         store=True,
-        help="Date of the first rehearsal in this project.",
+        help="Date of the first event in this project.",
     )
     end_date = fields.Date(
         string="End date",
         compute='_compute_dates',
         store=True,
-        help="Date of the last concert in this project.",
+        help="Date of the last event in this project.",
     )
 
-    @api.depends('gig_ids.event_date', 'gig_ids.event_type')
+    piece_ids = fields.Many2many(
+        comodel_name='gig.piece',
+        relation='gig_project_piece_rel',
+        column1='project_id',
+        column2='piece_id',
+        string="Programme",
+    )
+
+    participant_ids = fields.Many2many(
+        comodel_name='res.partner',
+        relation='gig_project_partner_rel',
+        column1='project_id',
+        column2='partner_id',
+        string="Participants",
+    )
+
+    @api.depends('gig_ids.event_date')
     def _compute_dates(self):
         for project in self:
-            rehearsal_dates = project.gig_ids.filtered(
-                lambda g: g.event_type == 'rehearsal' and g.event_date
+            dates = project.gig_ids.filtered(
+                lambda g: g.event_date
             ).mapped('event_date')
-            concert_dates = project.gig_ids.filtered(
-                lambda g: g.event_type == 'concert' and g.event_date
-            ).mapped('event_date')
-
-            project.start_date = min(rehearsal_dates) if rehearsal_dates else False
-            project.end_date = max(concert_dates) if concert_dates else False
+            
+            project.start_date = min(dates) if dates else False
+            project.end_date = max(dates) if dates else False

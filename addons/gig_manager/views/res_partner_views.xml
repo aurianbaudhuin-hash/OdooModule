@@ -1,0 +1,24 @@
+<odoo>
+    <record id="view_partner_form_gig_inherit" model="ir.ui.view">
+        <field name="name">res.partner.form.gig.inherit</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <notebook position="inside">
+                <page string="Music" name="gig_music">
+                    <group string="Instruments Played">
+                        <field name="instrument_ids" nolabel="1">
+                            <list editable="bottom">
+                                <field name="instrument_id"/>
+                                <field name="level"/>
+                            </list>
+                        </field>
+                    </group>
+                    <group string="Projects">
+                        <field name="gig_project_ids" nolabel="1" widget="many2many_tags" readonly="1"/>
+                    </group>
+                </page>
+            </notebook>
+        </field>
+    </record>
+</odoo>

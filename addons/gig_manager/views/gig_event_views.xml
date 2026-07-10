@@ -4,8 +4,12 @@
         <field name="model">gig.event</field>
         <field name="arch" type="xml">
             <list>
+                <field name="event_type"/>
                 <field name="name"/>
                 <field name="event_date"/>
+                <field name="start_time" widget="float_time"/>
+                <field name="end_time" widget="float_time"/>
+                <field name="location"/>
                 <field name="project_id"/>
             </list>
         </field>
@@ -18,12 +22,40 @@
             <form>
                 <sheet>
                     <group>
-                        <field name="name"/>
-                        <field name="event_date"/>
-                        <field name="project_id"/>
+                        <group>
+                            <field name="event_type"/>
+                            <field name="name" invisible="event_type == 'rehearsal'"/>
+                            <field name="project_id"/>
+                        </group>
+                        <group>
+                            <field name="event_date"/>
+                            <field name="start_time" widget="float_time"/>
+                            <field name="end_time" widget="float_time"/>
+                            <field name="location"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="notes" placeholder="Any comment about this event..."/>
                     </group>
                 </sheet>
             </form>
+        </field>
+    </record>
+
+    <record id="view_gig_event_search" model="ir.ui.view">
+        <field name="name">gig.event.search</field>
+        <field name="model">gig.event</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="project_id"/>
+                <filter string="Concerts" name="filter_concert" domain="[('event_type', '=', 'concert')]"/>
+                <filter string="Rehearsals" name="filter_rehearsal" domain="[('event_type', '=', 'rehearsal')]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Project" name="group_project" context="{'group_by': 'project_id'}"/>
+                    <filter string="Type" name="group_type" context="{'group_by': 'event_type'}"/>
+                </group>
+            </search>
         </field>
     </record>
 
@@ -32,7 +64,4 @@
         <field name="res_model">gig.event</field>
         <field name="view_mode">list,form</field>
     </record>
-
-    <menuitem id="menu_gig_event" name="Gigs"
-              parent="menu_gig_root" action="action_gig_event" sequence="20"/>
 </odoo>
