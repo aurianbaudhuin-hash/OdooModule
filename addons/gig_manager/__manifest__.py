@@ -12,9 +12,13 @@ instrument, at which level, on which project.
     'category': 'Productivity',
     'author': "Aurian",
     'license': 'LGPL-3',
-    'depends': ['base', 'contacts'],
+    # 'mail' is already pulled in transitively by 'contacts', but this
+    # module now uses mail.template directly - depending on it explicitly
+    # keeps the manifest honest about what the code imports.
+    'depends': ['base', 'contacts', 'mail'],
     'data': [
         'security/ir.model.access.csv',
+        'data/gig_mail_templates.xml',
         'views/gig_instrument_views.xml',
         'views/gig_piece_type_views.xml',
         'views/gig_movement_views.xml',
@@ -27,6 +31,7 @@ instrument, at which level, on which project.
         'views/gig_section_group_views.xml',
         'views/gig_registration_views.xml',
         'views/gig_registration_resolve_views.xml',
+        'views/gig_mail_template_views.xml',
         'views/gig_public_templates.xml',
         'views/res_partner_views.xml',
         'views/gig_menus.xml',

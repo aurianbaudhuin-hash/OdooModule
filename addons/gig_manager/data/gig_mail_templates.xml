@@ -1,0 +1,120 @@
+<odoo>
+    <!-- noupdate="1": these templates are *starting points* the organizer is
+         expected to reword in the UI (Configuration > Email Templates) - a
+         module update must not overwrite their edits. The flip side: changes
+         to this file only reach databases where the template is deleted (it
+         gets recreated) or via a forced data update. -->
+    <data noupdate="1">
+
+        <record id="mail_template_registration_accepted" model="mail.template">
+            <field name="name">Gig Registration: Confirmation</field>
+            <field name="model_id" ref="gig_manager.model_gig_registration"/>
+            <field name="subject">Registration confirmed — {{ object.project_id.name }}</field>
+            <field name="email_from">{{ user.email_formatted }}</field>
+            <!-- The registration's own email, not partner_id.email: it is what
+                 the musician just typed, i.e. the freshest address we have
+                 (the resolve wizard may or may not have copied it onto the
+                 contact, depending on the organizer's conflict choices). -->
+            <field name="email_to">{{ object.email }}</field>
+            <field name="auto_delete" eval="True"/>
+            <field name="body_html" type="html">
+<div style="font-family: Arial, sans-serif; font-size: 14px; color: #222;">
+    <p>Hello <t t-out="object.name"/>,</p>
+    <p>
+        Good news: your registration for
+        <strong t-out="object.project_id.name"/> has been accepted!
+        You are registered in the section:
+        <strong t-out="object.section_id.name"/>.
+    </p>
+    <t t-if="object.attendance_line_ids">
+        <p>Here is a recap of the rehearsal availability you declared:</p>
+        <t t-set="status_labels"
+           t-value="{'present': 'Present', 'absent': 'Absent', 'maybe': 'Uncertain'}"/>
+        <table style="border-collapse: collapse;">
+            <tr t-foreach="object.attendance_line_ids" t-as="line">
+                <td style="padding: 2px 12px 2px 0; border-bottom: 1px solid #eee;"
+                    t-out="line.event_id.event_date.strftime('%A %d %B %Y')"/>
+                <td style="padding: 2px 0; border-bottom: 1px solid #eee;"
+                    t-out="status_labels[line.status]"/>
+            </tr>
+        </table>
+        <p>
+            If your availability changes, please let the organizer know as
+            soon as possible.
+        </p>
+    </t>
+    <p>
+        All the practical information about the project (calendar, programme,
+        participants...) is on the callsheet:
+    </p>
+    <p style="margin: 16px 0;">
+        <a t-att-href="object.project_id.get_callsheet_url()"
+           style="background-color: #46246b; color: #ffffff; padding: 10px 22px;
+                  text-decoration: none; border-radius: 6px;">
+            Open the callsheet
+        </a>
+    </p>
+    <p>See you soon!</p>
+</div>
+            </field>
+        </record>
+
+        <record id="mail_template_registration_rejected" model="mail.template">
+            <field name="name">Gig Registration: Refusal</field>
+            <field name="model_id" ref="gig_manager.model_gig_registration"/>
+            <field name="subject">About your registration — {{ object.project_id.name }}</field>
+            <field name="email_from">{{ user.email_formatted }}</field>
+            <field name="email_to">{{ object.email }}</field>
+            <field name="auto_delete" eval="True"/>
+            <field name="body_html" type="html">
+<div style="font-family: Arial, sans-serif; font-size: 14px; color: #222;">
+    <p>Hello <t t-out="object.name"/>,</p>
+    <p>
+        Thank you for your interest in
+        <strong t-out="object.project_id.name"/> and for taking the time to
+        register for the <strong t-out="object.section_id.name"/> section.
+    </p>
+    <p>
+        Unfortunately, we are unable to offer you a spot on this project.
+        This is in no way a judgement of your abilities - sections fill up
+        quickly and the balance of the ensemble leaves us little room.
+    </p>
+    <p>
+        We hope to see you on a future project!
+    </p>
+</div>
+            </field>
+        </record>
+
+        <record id="mail_template_callsheet_updated" model="mail.template">
+            <field name="name">Gig Project: Callsheet Updated</field>
+            <field name="model_id" ref="gig_manager.model_gig_project"/>
+            <field name="subject">Callsheet updated — {{ object.name }}</field>
+            <field name="email_from">{{ user.email_formatted }}</field>
+            <!-- Recipient comes from the sending context: the project method
+                 loops over participants and sends one mail per musician, so
+                 nobody sees the other recipients' addresses (a plain
+                 partner_to list would put everyone in the same email). -->
+            <field name="email_to">{{ ctx.get('recipient_email') }}</field>
+            <field name="auto_delete" eval="True"/>
+            <field name="body_html" type="html">
+<div style="font-family: Arial, sans-serif; font-size: 14px; color: #222;">
+    <p>Hello <t t-out="ctx.get('recipient_name')"/>,</p>
+    <p>
+        The callsheet of <strong t-out="object.name"/> has been updated.
+        Please have a look to stay up to date:
+    </p>
+    <p style="margin: 16px 0;">
+        <a t-att-href="object.get_callsheet_url()"
+           style="background-color: #46246b; color: #ffffff; padding: 10px 22px;
+                  text-decoration: none; border-radius: 6px;">
+            Open the callsheet
+        </a>
+    </p>
+    <p>See you soon!</p>
+</div>
+            </field>
+        </record>
+
+    </data>
+</odoo>

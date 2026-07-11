@@ -16,6 +16,14 @@
         <field name="model">gig.project</field>
         <field name="arch" type="xml">
             <form>
+                <header>
+                    <!-- confirm= because this immediately emails every
+                         participant - a stray click should not spam the
+                         whole orchestra. -->
+                    <button name="action_notify_callsheet_update" type="object"
+                            string="Notify Callsheet Update"
+                            confirm="This will email every participant of this project to tell them the callsheet changed. Send it?"/>
+                </header>
                 <sheet>
                     <!-- Complements, doesn't duplicate, the "Attendance" notebook page
                          below: this button opens the standalone gig.attendance list

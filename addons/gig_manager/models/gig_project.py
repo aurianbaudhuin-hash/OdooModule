@@ -1,5 +1,5 @@
 from odoo import models, fields, api, _
-from odoo.exceptions import ValidationError
+from odoo.exceptions import UserError, ValidationError
 
 
 class GigProject(models.Model):
@@ -190,6 +190,47 @@ class GigProject(models.Model):
         action['domain'] = [('project_id', '=', self.id)]
         action['context'] = {'default_project_id': self.id}
         return action
+
+    def get_callsheet_url(self):
+        """Absolute URL of this project's public callsheet, for use in
+        emails: a mail is read outside the web client, so the relative
+        paths the act_url buttons use are not enough - get_base_url()
+        resolves the host from web.base.url without hardcoding it."""
+        self.ensure_one()
+        return "%s/gig/%d/callsheet" % (self.get_base_url(), self.id)
+
+    def action_notify_callsheet_update(self):
+        """Email every participant that the callsheet changed.
+
+        One mail per musician (the template reads the recipient from
+        the sending context) rather than a single mail with everyone in
+        copy: participants should not see each other's addresses.
+        Participants without an email address are skipped, not fatal -
+        the organizer is told how many were reached either way, and an
+        all-skipped send raises instead of pretending it worked.
+        """
+        self.ensure_one()
+        template = self.env.ref('gig_manager.mail_template_callsheet_updated')
+        recipients = self.participant_ids.partner_id.filtered('email')
+        if not recipients:
+            raise UserError(_(
+                "No participant of this project has an email address - "
+                "there is nobody to notify."
+            ))
+        for partner in recipients:
+            template.with_context(
+                recipient_email=partner.email,
+                recipient_name=partner.name,
+            ).send_mail(self.id)
+        skipped = len(self.participant_ids) - len(recipients)
+        message = _("Callsheet update sent to %s musician(s).", len(recipients))
+        if skipped:
+            message += _(" (%s participant(s) without an email address were skipped.)", skipped)
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {'message': message, 'type': 'success', 'sticky': False},
+        }
 
     def action_open_registration_page(self):
         self.ensure_one()

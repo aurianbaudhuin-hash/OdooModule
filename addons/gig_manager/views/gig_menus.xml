@@ -29,4 +29,6 @@
               parent="menu_gig_configuration" action="action_gig_section" sequence="40"/>
     <menuitem id="menu_gig_section_group" name="Section Groups"
               parent="menu_gig_configuration" action="action_gig_section_group" sequence="50"/>
+    <menuitem id="menu_gig_mail_templates" name="Email Templates"
+              parent="menu_gig_configuration" action="action_gig_mail_templates" sequence="60"/>
 </odoo>

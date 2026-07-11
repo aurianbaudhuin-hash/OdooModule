@@ -201,12 +201,31 @@ class GigRegistration(models.Model):
             ], limit=1)
             attendance.status = line.status
         self.state = 'accepted'
+        self._send_state_email('gig_manager.mail_template_registration_accepted')
 
     def action_reject(self):
         for registration in self:
             if registration.state != 'pending':
                 raise UserError(_("Only pending registrations can be rejected."))
         self.write({'state': 'rejected'})
+        self._send_state_email('gig_manager.mail_template_registration_rejected')
+
+    def _send_state_email(self, template_xmlid):
+        """Queue the accept/reject notification for each registration.
+
+        force_send is left at its default (False) on purpose: the mail
+        lands in Odoo's outgoing queue and the mail cron delivers it -
+        so a missing or misconfigured SMTP server can never make the
+        accept/reject action itself fail. The templates are looked up
+        by xmlid with raise_if_not_found=False for the same reason: a
+        deleted template shouldn't block the workflow, the state change
+        is the business action, the email is a courtesy.
+        """
+        template = self.env.ref(template_xmlid, raise_if_not_found=False)
+        if not template:
+            return
+        for registration in self:
+            template.send_mail(registration.id)
 
 
 class GigRegistrationAttendance(models.Model):

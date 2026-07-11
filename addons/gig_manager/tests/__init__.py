@@ -13,4 +13,5 @@ from . import test_gig_project_participant
 from . import test_gig_attendance
 from . import test_gig_registration
 from . import test_gig_public_pages
+from . import test_gig_mail
 from . import test_res_partner

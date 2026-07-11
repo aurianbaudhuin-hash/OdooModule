@@ -1,0 +1,12 @@
+<odoo>
+    <!-- No custom views: mail.template ships perfectly good list/form views
+         with the mail module - this action only scopes them to the templates
+         that render on this module's models, so the organizer manages "the
+         gig emails" without wading through every template in the database. -->
+    <record id="action_gig_mail_templates" model="ir.actions.act_window">
+        <field name="name">Email Templates</field>
+        <field name="res_model">mail.template</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('model', 'in', ['gig.registration', 'gig.project'])]</field>
+    </record>
+</odoo>
