@@ -4,7 +4,12 @@ from . import gig_movement
 from . import gig_composer
 from . import gig_piece
 from . import gig_event
+from . import gig_section_group
+from . import gig_section
+from . import gig_section_instrument
+from . import gig_section_group_line
 from . import gig_project
+from . import gig_project_participant
 from . import gig_partner_instrument
 from . import gig_attendance
 from . import res_partner

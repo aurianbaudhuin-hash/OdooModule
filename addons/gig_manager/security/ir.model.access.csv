@@ -8,3 +8,8 @@ access_gig_composer,gig.composer,model_gig_composer,base.group_user,1,1,1,1
 access_gig_piece,gig.piece,model_gig_piece,base.group_user,1,1,1,1
 access_gig_partner_instrument,gig.partner.instrument,model_gig_partner_instrument,base.group_user,1,1,1,1
 access_gig_attendance,gig.attendance,model_gig_attendance,base.group_user,1,1,1,1
+access_gig_section_group,gig.section.group,model_gig_section_group,base.group_user,1,1,1,1
+access_gig_section,gig.section,model_gig_section,base.group_user,1,1,1,1
+access_gig_section_instrument,gig.section.instrument,model_gig_section_instrument,base.group_user,1,1,1,1
+access_gig_section_group_line,gig.section.group.line,model_gig_section_group_line,base.group_user,1,1,1,1
+access_gig_project_participant,gig.project.participant,model_gig_project_participant,base.group_user,1,1,1,1

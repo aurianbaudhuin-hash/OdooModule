@@ -1,19 +1,39 @@
-from odoo import models, fields, api
+from odoo import models, fields, api, _
+from odoo.exceptions import ValidationError
 
 
 class GigProject(models.Model):
     """A tour or concert series: the top-level container for a set of
     events (rehearsals/concerts), a programme of pieces, and the
-    musicians participating.
+    musicians participating (each registered in a section).
 
     Workflow this model is built around: events are created first by the
     organizer, and participants are added to the project afterwards. See
-    write() below for the consequence that has on attendance tracking.
+    gig.project.participant.create() for the consequence that has on
+    attendance tracking.
     """
     _name = 'gig.project'
     _description = 'Tour or concert series'
 
     name = fields.Char(string="Project name", required=True)
+
+    section_group_id = fields.Many2one(
+        comodel_name='gig.section.group',
+        string="Section group",
+        # Every project must declare which ensemble layout it needs -
+        # exactly one. 'restrict' (not 'cascade') because the group is
+        # shared reference data, like composer_id on gig.piece: deleting
+        # a layout that live projects still rely on must be blocked.
+        #
+        # NB: on a database that already contains projects, Odoo cannot
+        # apply the NOT NULL column constraint until every existing row
+        # has been given a group (it logs an error and skips it, while
+        # the ORM still enforces required= for anything created or
+        # edited from then on). Assign a group to legacy projects, then
+        # re-run -u gig_manager to get the DB-level guarantee too.
+        required=True,
+        ondelete='restrict',
+    )
 
     gig_ids = fields.One2many(
         comodel_name='gig.event',
@@ -46,14 +66,13 @@ class GigProject(models.Model):
         string="Programme",
     )
 
-    participant_ids = fields.Many2many(
-        comodel_name='res.partner',
-        # Same convention as piece_ids above: shared pivot table
-        # (gig_project_partner_rel) with res.partner.gig_project_ids, so
-        # a contact's projects can be read straight off their own record.
-        relation='gig_project_partner_rel',
-        column1='project_id',
-        column2='partner_id',
+    participant_ids = fields.One2many(
+        # A One2many of registration records, not an M2M of partners:
+        # every musician on a project must be registered in a section,
+        # and a bare M2M row has nowhere to carry that section - see
+        # gig.project.participant's docstring for the full story.
+        comodel_name='gig.project.participant',
+        inverse_name='project_id',
         string="Participants",
     )
 
@@ -123,38 +142,29 @@ class GigProject(models.Model):
         action['context'] = {'default_project_id': self.id}
         return action
 
-    def write(self, vals):
-        """Auto-create a 'maybe'-status attendance line for every existing
-        event whenever a new partner is added to participant_ids.
-
-        This exists because of the workflow this model assumes: events
-        are created first, participants are added afterwards - so without
-        this override, adding a musician to a project wouldn't give them
-        an attendance row for any of the events already planned, and the
-        organizer would have to create those rows by hand one by one.
-
-        old_participants MUST be captured before calling super().write():
-        by the time super().write() returns, participant_ids already
-        reflects the new value, so diffing "new - old" afterwards would
-        always yield an empty set and no attendance would ever be
-        created. There's intentionally no equivalent hook on
-        gig.event.create() - in this workflow, events are never added
-        after registration has started, so that hook was removed as dead
-        code rather than kept "just in case".
+    @api.constrains('section_group_id')
+    def _check_participants_sections_in_group(self):
+        """Mirror image of gig.project.participant's own constraint
+        (section must belong to the project's group): that one fires
+        when a *registration* is created or edited, but @api.constrains
+        only reacts to fields of its own model - so swapping this
+        project's section group out from under existing registrations
+        would slip past it entirely. This side covers that hole: a
+        group change is only valid if every registered musician's
+        section still exists in the new layout.
         """
-        old_participants = {
-            project: project.participant_ids for project in self
-        } if 'participant_ids' in vals else {}
-
-        result = super().write(vals)
-
-        if 'participant_ids' in vals:
-            for project in self:
-                new_partners = project.participant_ids - old_participants[project]
-                for partner in new_partners:
-                    for event in project.gig_ids:
-                        self.env['gig.attendance'].create({
-                            'partner_id': partner.id,
-                            'event_id': event.id,
-                        })
-        return result
+        for project in self:
+            stray = project.participant_ids.filtered(
+                lambda r: r.section_id not in
+                project.section_group_id.line_ids.section_id
+            )
+            if stray:
+                raise ValidationError(_(
+                    "Cannot use section group '%(group)s' on project "
+                    "'%(project)s': the following musicians are "
+                    "registered in sections it does not contain: "
+                    "%(names)s.",
+                    group=project.section_group_id.name,
+                    project=project.name,
+                    names=", ".join(stray.partner_id.mapped('name')),
+                ))

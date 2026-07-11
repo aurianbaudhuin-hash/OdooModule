@@ -30,6 +30,7 @@
                     </div>
                     <group>
                         <field name="name"/>
+                        <field name="section_group_id"/>
                         <field name="start_date"/>
                         <field name="end_date"/>
                     </group>
@@ -49,8 +50,20 @@
                         <page string="Programme" name="programme">
                             <field name="piece_ids" widget="many2many_tags"/>
                         </page>
+                        <!-- Registration rows (gig.project.participant), not bare
+                             partner tags: every musician must be registered in a
+                             section. The domain keeps the dropdown to sections that
+                             actually exist in this project's section group - the
+                             model-level constraint enforces the same rule for
+                             writes that bypass this form. -->
                         <page string="Participants" name="participants">
-                            <field name="participant_ids" widget="many2many_tags"/>
+                            <field name="participant_ids">
+                                <list editable="bottom">
+                                    <field name="partner_id"/>
+                                    <field name="section_id"
+                                           domain="[('group_line_ids.group_id', '=', parent.section_group_id)]"/>
+                                </list>
+                            </field>
                         </page>
                         <!-- gig.attendance.project_id is a related/store field derived
                              from event_id.project_id, not a directly-settable one - so

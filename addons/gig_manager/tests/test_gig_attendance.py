@@ -15,7 +15,14 @@ class TestGigAttendance(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.project = cls.env['gig.project'].create({'name': 'Attendance Test Tour'})
+        # gig.project.section_group_id is required; which layout the
+        # project points at is irrelevant to every attendance test here.
+        cls.section_group = cls.env['gig.section.group'].create(
+            {'name': 'Test Fixture Attendance Test Orchestra'})
+        cls.project = cls.env['gig.project'].create({
+            'name': 'Attendance Test Tour',
+            'section_group_id': cls.section_group.id,
+        })
         cls.event = cls.env['gig.event'].create({
             'project_id': cls.project.id,
             'event_type': 'concert',
@@ -76,7 +83,10 @@ class TestGigAttendance(TransactionCase):
         different project must update project_id accordingly, with no
         extra wiring required.
         """
-        other_project = self.env['gig.project'].create({'name': 'Other Tour'})
+        other_project = self.env['gig.project'].create({
+            'name': 'Other Tour',
+            'section_group_id': self.section_group.id,
+        })
         other_event = self.env['gig.event'].create({
             'project_id': other_project.id,
             'event_type': 'concert',

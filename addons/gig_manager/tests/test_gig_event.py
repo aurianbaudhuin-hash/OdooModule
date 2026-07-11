@@ -17,7 +17,14 @@ class TestGigEvent(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.project = cls.env['gig.project'].create({'name': 'Autumn Tour'})
+        # gig.project.section_group_id is required; which layout the
+        # project points at is irrelevant to every event test here.
+        cls.section_group = cls.env['gig.section.group'].create(
+            {'name': 'Test Fixture Event Test Orchestra'})
+        cls.project = cls.env['gig.project'].create({
+            'name': 'Autumn Tour',
+            'section_group_id': cls.section_group.id,
+        })
 
     def test_rehearsal_with_name_raises(self):
         """_check_name_by_type: a rehearsal must never carry a name - the
@@ -162,7 +169,10 @@ class TestGigEvent(TransactionCase):
         without its parent project, so deleting the project must remove
         its events rather than leaving them orphaned or blocking the
         project's deletion."""
-        project = self.env['gig.project'].create({'name': 'Short Lived Tour'})
+        project = self.env['gig.project'].create({
+            'name': 'Short Lived Tour',
+            'section_group_id': self.section_group.id,
+        })
         event = self.env['gig.event'].create({
             'project_id': project.id,
             'event_type': 'concert',

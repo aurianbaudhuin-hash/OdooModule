@@ -1,0 +1,52 @@
+<odoo>
+    <record id="view_gig_section_group_list" model="ir.ui.view">
+        <field name="name">gig.section.group.list</field>
+        <field name="model">gig.section.group</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="musician_count"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_gig_section_group_form" model="ir.ui.view">
+        <field name="name">gig.section.group.form</field>
+        <field name="model">gig.section.group</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="musician_count"/>
+                    </group>
+                    <!-- Each row is a gig.section.group.line, so the section_id
+                         Many2one gives both ways of filling the group: pick an
+                         existing shared section from the dropdown, or "Create and
+                         edit..." a brand-new one on the spot. -->
+                    <field name="line_ids">
+                        <list editable="bottom">
+                            <!-- The drag handle is the whole point of the sequence
+                                 field: users reorder sections by dragging, never by
+                                 typing sequence numbers. -->
+                            <field name="sequence" widget="handle"/>
+                            <!-- no_quick_create: quick-creating a section from just
+                                 its name would save it with zero instrument lines,
+                                 which gig.section's constraint (rightly) rejects -
+                                 forcing the full "Create and edit..." modal lets the
+                                 user add the lines before the save happens. -->
+                            <field name="section_id" options="{'no_quick_create': True}"/>
+                            <field name="musician_count"/>
+                        </list>
+                    </field>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_gig_section_group" model="ir.actions.act_window">
+        <field name="name">Section Groups</field>
+        <field name="res_model">gig.section.group</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

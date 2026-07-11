@@ -23,4 +23,8 @@
               parent="menu_gig_configuration" action="action_gig_piece_type" sequence="20"/>
     <menuitem id="menu_gig_movement" name="Artistic Movements"
               parent="menu_gig_configuration" action="action_gig_movement" sequence="30"/>
+    <menuitem id="menu_gig_section" name="Sections"
+              parent="menu_gig_configuration" action="action_gig_section" sequence="40"/>
+    <menuitem id="menu_gig_section_group" name="Section Groups"
+              parent="menu_gig_configuration" action="action_gig_section_group" sequence="50"/>
 </odoo>

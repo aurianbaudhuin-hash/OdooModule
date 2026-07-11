@@ -1,8 +1,9 @@
-"""Tests for the res.partner extension: instrument_ids, gig_project_ids
-and gig_attendance_ids are all pure inverses of relations defined
-elsewhere in this module, so these tests verify each one stays correctly
-in sync with its "other side" rather than testing any logic that lives
-in res_partner.py itself (there isn't any).
+"""Tests for the res.partner extension: instrument_ids,
+gig_participation_ids and gig_attendance_ids are pure inverses of
+relations defined elsewhere in this module, and gig_project_ids is
+derived from the participations - so these tests verify each one stays
+correctly in sync with its "other side" rather than testing any
+standalone logic in res_partner.py (there isn't any).
 """
 from odoo import Command
 from odoo.tests.common import TransactionCase, tagged
@@ -10,6 +11,27 @@ from odoo.tests.common import TransactionCase, tagged
 
 @tagged('post_install', '-at_install')
 class TestResPartner(TransactionCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        # gig.project.section_group_id is required, and registering a
+        # participant needs a section inside that layout - which layout
+        # and section they are is irrelevant to these mirror tests.
+        cls.section = cls.env['gig.section'].create({
+            'name': 'Test Fixture Partner Strings',
+            'instrument_line_ids': [Command.create({
+                'instrument_id': cls.env['gig.instrument'].create(
+                    {'name': 'Test Fixture Partner Violin'}).id,
+                'quantity': 4,
+            })],
+        })
+        cls.section_group = cls.env['gig.section.group'].create(
+            {'name': 'Test Fixture Partner Test Orchestra'})
+        cls.env['gig.section.group.line'].create({
+            'group_id': cls.section_group.id,
+            'section_id': cls.section.id,
+        })
 
     def test_instrument_ids_inverse_of_partner_instrument(self):
         """instrument_ids is the O2M inverse of
@@ -25,26 +47,36 @@ class TestResPartner(TransactionCase):
         })
         self.assertIn(line, partner.instrument_ids)
 
-    def test_gig_project_ids_mirrors_participant_ids(self):
-        """gig_project_ids (on res.partner) and participant_ids (on
-        gig.project) are two Many2many fields deliberately pointed at the
-        *same* pivot table (gig_project_partner_rel, with matching
-        column1/column2 on each side) - this codebase's convention for
-        any M2M that needs to be queried from both directions. Adding a
-        partner from the project side must be visible from the partner
-        side without any extra syncing code, since it's the same
-        underlying join table row either way.
+    def test_gig_project_ids_derived_from_registrations(self):
+        """gig_project_ids used to share a pivot table with the
+        project-side M2M; since participation was promoted to a real
+        model (gig.project.participant, carrying the section), it's now
+        *computed* from the partner's registrations. Registering a
+        musician on the project side must therefore still be visible
+        from the partner side - through gig_participation_ids (the true
+        inverse) and the derived gig_project_ids alike.
         """
-        project = self.env['gig.project'].create({'name': 'Mirrored Tour'})
+        project = self.env['gig.project'].create({
+            'name': 'Mirrored Tour',
+            'section_group_id': self.section_group.id,
+        })
         partner = self.env['res.partner'].create({'name': 'Mirrored Participant'})
-        project.write({'participant_ids': [Command.set([partner.id])]})
+        registration = self.env['gig.project.participant'].create({
+            'project_id': project.id,
+            'partner_id': partner.id,
+            'section_id': self.section.id,
+        })
+        self.assertIn(registration, partner.gig_participation_ids)
         self.assertIn(project, partner.gig_project_ids)
 
     def test_gig_attendance_ids_inverse_of_attendance(self):
         """gig_attendance_ids is the O2M inverse of
         gig.attendance.partner_id - an attendance row created directly
         should be reachable from the partner's side."""
-        project = self.env['gig.project'].create({'name': 'Attendance Mirror Tour'})
+        project = self.env['gig.project'].create({
+            'name': 'Attendance Mirror Tour',
+            'section_group_id': self.section_group.id,
+        })
         event = self.env['gig.event'].create({
             'project_id': project.id,
             'event_type': 'concert',
