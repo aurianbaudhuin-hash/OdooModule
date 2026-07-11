@@ -91,6 +91,23 @@ class GigProject(models.Model):
         compute='_compute_attendance_count',
     )
 
+    page_block_ids = fields.One2many(
+        comodel_name='gig.page.block',
+        inverse_name='project_id',
+        string="Page Blocks",
+    )
+
+    registration_ids = fields.One2many(
+        comodel_name='gig.registration',
+        inverse_name='project_id',
+        string="Registrations",
+    )
+
+    pending_registration_count = fields.Integer(
+        string="Pending Registrations",
+        compute='_compute_pending_registration_count',
+    )
+
     @api.depends('gig_ids.event_date', 'gig_ids.event_type')
     def _compute_dates(self):
         """start_date/end_date intentionally aren't a simple min/max
@@ -124,6 +141,71 @@ class GigProject(models.Model):
             project.attendance_count = self.env['gig.attendance'].search_count(
                 [('project_id', '=', project.id)]
             )
+
+    @api.depends('registration_ids.state')
+    def _compute_pending_registration_count(self):
+        # Counts only 'pending': the smart button is a to-do badge for
+        # the organizer ("N requests waiting on you"), not an archive
+        # counter - accepted/rejected ones are still reachable through
+        # the same button, just not worth a number.
+        for project in self:
+            project.pending_registration_count = len(
+                project.registration_ids.filtered(lambda r: r.state == 'pending')
+            )
+
+    def _get_section_fill(self):
+        """Map each section of this project's group to its occupancy:
+        {section: {'count': confirmed participants, 'capacity': required
+        headcount, 'full': bool}}. Only *accepted* participants count -
+        pending registrations reserve nothing, otherwise a burst of
+        requests the organizer later rejects would scare real
+        candidates away from a section that is actually open.
+
+        Lives on the model (not in the website controller) because
+        "is this section full?" is a business question, and this way
+        backend features can reuse the same definition later.
+        """
+        self.ensure_one()
+        fill = {}
+        for section in self.section_group_id.line_ids.section_id:
+            count = self.env['gig.project.participant'].search_count([
+                ('project_id', '=', self.id),
+                ('section_id', '=', section.id),
+            ])
+            capacity = section.musician_count
+            fill[section] = {
+                'count': count,
+                'capacity': capacity,
+                'full': count >= capacity,
+            }
+        return fill
+
+    def action_view_registrations(self):
+        """Open this project's registrations (all states - the domain
+        filters by project, the list's own filters handle the rest)."""
+        self.ensure_one()
+        action = self.env['ir.actions.act_window']._for_xml_id(
+            'gig_manager.action_gig_registration'
+        )
+        action['domain'] = [('project_id', '=', self.id)]
+        action['context'] = {'default_project_id': self.id}
+        return action
+
+    def action_open_registration_page(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_url',
+            'url': '/gig/%d/register' % self.id,
+            'target': 'new',
+        }
+
+    def action_open_callsheet_page(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_url',
+            'url': '/gig/%d/callsheet' % self.id,
+            'target': 'new',
+        }
 
     def action_view_attendance(self):
         """Open the shared gig.attendance list, scoped to this project.

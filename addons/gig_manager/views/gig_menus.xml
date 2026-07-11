@@ -7,6 +7,8 @@
               parent="menu_gig_root" action="action_gig_event" sequence="20"/>
     <menuitem id="menu_gig_attendance" name="Attendance"
               parent="menu_gig_root" action="action_gig_attendance" sequence="25"/>
+    <menuitem id="menu_gig_registration" name="Registrations"
+              parent="menu_gig_root" action="action_gig_registration" sequence="27"/>
 
     <menuitem id="menu_gig_programme" name="Programme"
               parent="menu_gig_root" sequence="30"/>

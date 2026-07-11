@@ -1,0 +1,237 @@
+<odoo>
+    <!-- Standalone layout, deliberately NOT website.layout / web.frontend_layout:
+         the module doesn't depend on the website builder, and these pages need
+         nothing from the asset pipeline - a self-contained page with inline CSS
+         keeps the public surface small and the rendering fully under this
+         module's control. -->
+    <template id="public_layout" name="Gig Public Layout">
+        <html>
+            <head>
+                <meta charset="utf-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                <title t-esc="page_title or project.name"/>
+                <style>
+                    * { box-sizing: border-box; }
+                    body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+                           background: #f4f4f6; color: #222; line-height: 1.5; }
+                    .wrap { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+                    header.page h1 { margin: 8px 0 4px; font-size: 2rem; }
+                    header.page .dates { color: #666; margin: 0 0 24px; }
+                    .card { background: #fff; border: 1px solid #e2e2e8; border-radius: 8px;
+                            padding: 20px 24px; margin-bottom: 20px; }
+                    .card h2 { margin: 0 0 12px; font-size: 1.2rem; }
+                    table.grid { width: 100%; border-collapse: collapse; }
+                    table.grid th, table.grid td { text-align: left; padding: 6px 10px;
+                            border-bottom: 1px solid #ececf1; }
+                    table.grid th { color: #666; font-weight: 600; font-size: .85rem;
+                            text-transform: uppercase; }
+                    .tag { display: inline-block; padding: 1px 8px; border-radius: 10px;
+                           font-size: .8rem; background: #ececf1; }
+                    .tag.concert { background: #ffe9c7; }
+                    .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+                    .tab-btn { flex: 1; padding: 10px; font-size: 1rem; cursor: pointer;
+                               border: 1px solid #d0d0d8; background: #fff; border-radius: 8px; }
+                    .tab-btn.active { background: #46246b; color: #fff; border-color: #46246b; }
+                    .tab-panel { display: none; }
+                    .tab-panel.active { display: block; }
+                    form label { display: block; font-weight: 600; margin: 14px 0 4px; }
+                    form input, form select { width: 100%; padding: 8px 10px; font-size: 1rem;
+                               border: 1px solid #d0d0d8; border-radius: 6px; background: #fff; }
+                    form select.rsvp { width: auto; }
+                    .submit-btn { margin-top: 20px; padding: 12px 28px; font-size: 1rem;
+                               background: #46246b; color: #fff; border: none;
+                               border-radius: 8px; cursor: pointer; }
+                    .success { background: #e6f6e6; border: 1px solid #b7e3b7;
+                               border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; }
+                    .block-content img, .block-content iframe { max-width: 100%; }
+                </style>
+            </head>
+            <body>
+                <div class="wrap">
+                    <header class="page">
+                        <h1 t-esc="project.name"/>
+                        <p class="dates" t-if="project.start_date and project.end_date">
+                            <t t-esc="project.start_date.strftime('%d %B %Y')"/> —
+                            <t t-esc="project.end_date.strftime('%d %B %Y')"/>
+                        </p>
+                    </header>
+                    <!-- The magic variable 0 holds the caller's body - this is how
+                         each page injects its content into the shared layout. -->
+                    <t t-out="0"/>
+                </div>
+            </body>
+        </html>
+    </template>
+
+    <!-- Reusable fragments: both public pages show the programme and the
+         calendar (the spec's "by default" content), so they're factored out
+         rather than maintained twice. -->
+    <template id="public_programme" name="Gig Public Programme">
+        <div class="card">
+            <h2>Programme</h2>
+            <p t-if="not pieces">To be announced.</p>
+            <ul t-if="pieces">
+                <li t-foreach="pieces" t-as="piece" t-esc="piece.display_name"/>
+            </ul>
+        </div>
+    </template>
+
+    <template id="public_calendar" name="Gig Public Calendar">
+        <div class="card">
+            <h2>Calendar</h2>
+            <p t-if="not events">No events scheduled yet.</p>
+            <table class="grid" t-if="events">
+                <tr><th>Date</th><th>Type</th><th>Time</th><th>Location</th></tr>
+                <tr t-foreach="events" t-as="event">
+                    <td t-esc="event.event_date.strftime('%a %d %b %Y')"/>
+                    <td>
+                        <span t-attf-class="tag {{event.event_type}}">
+                            <t t-esc="event.name or ('Rehearsal' if event.event_type == 'rehearsal' else 'Concert')"/>
+                        </span>
+                    </td>
+                    <td>
+                        <t t-esc="'%02d:%02d' % (int(event.start_time), round((event.start_time - int(event.start_time)) * 60))"/>
+                        - <t t-esc="'%02d:%02d' % (int(event.end_time), round((event.end_time - int(event.end_time)) * 60))"/>
+                    </td>
+                    <td t-esc="event.location or ''"/>
+                </tr>
+            </table>
+        </div>
+    </template>
+
+    <template id="public_blocks" name="Gig Public Custom Blocks">
+        <div t-foreach="blocks" t-as="block" class="card">
+            <h2 t-esc="block.title"/>
+            <!-- t-field (not t-esc): renders the Html field's markup instead of
+                 escaping it - this is what makes images/maps/styled text work. -->
+            <div class="block-content" t-field="block.content"/>
+        </div>
+    </template>
+
+    <template id="page_registration" name="Gig Registration Page">
+        <t t-call="gig_manager.public_layout">
+            <t t-set="page_title" t-value="'Register — %s' % project.name"/>
+
+            <div class="tabs">
+                <button type="button" class="tab-btn" id="btn-info">Project</button>
+                <button type="button" class="tab-btn" id="btn-form">Registration</button>
+            </div>
+
+            <div class="tab-panel" id="tab-info">
+                <t t-call="gig_manager.public_programme"/>
+                <t t-call="gig_manager.public_calendar"/>
+                <t t-call="gig_manager.public_blocks"/>
+            </div>
+
+            <div class="tab-panel" id="tab-form">
+                <div t-if="submitted" class="success">
+                    <strong>Thank you!</strong> Your registration has been sent to the
+                    organizer, who will review it and get back to you.
+                </div>
+                <div class="card">
+                    <h2>Register for this project</h2>
+                    <form t-attf-action="/gig/{{project.id}}/register/submit" method="post" id="reg-form">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                        <label for="reg-name">Name</label>
+                        <input id="reg-name" type="text" name="name" required="required"/>
+                        <label for="reg-email">Email</label>
+                        <input id="reg-email" type="email" name="email" required="required"/>
+                        <label for="reg-phone">Phone (optional)</label>
+                        <input id="reg-phone" type="tel" name="phone"/>
+                        <label for="section-select">Section</label>
+                        <select id="section-select" name="section_id" required="required">
+                            <t t-foreach="project.section_group_id.line_ids" t-as="line">
+                                <t t-set="fill" t-value="section_fill[line.section_id]"/>
+                                <option t-att-value="line.section_id.id"
+                                        t-att-data-full="'1' if fill['full'] else '0'">
+                                    <t t-esc="line.section_id.name"/>
+                                    (<t t-esc="fill['count']"/>/<t t-esc="fill['capacity']"/>)
+                                </option>
+                            </t>
+                        </select>
+                        <div t-if="rehearsals">
+                            <label>Rehearsal availability</label>
+                            <table class="grid">
+                                <tr t-foreach="rehearsals" t-as="rehearsal">
+                                    <td>
+                                        <t t-esc="rehearsal.event_date.strftime('%a %d %b %Y')"/>
+                                        <t t-if="rehearsal.location"> — <t t-esc="rehearsal.location"/></t>
+                                    </td>
+                                    <td>
+                                        <select class="rsvp" t-attf-name="attendance_{{rehearsal.id}}">
+                                            <option value="maybe">Uncertain</option>
+                                            <option value="present">Present</option>
+                                            <option value="absent">Absent</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <button type="submit" class="submit-btn">Send registration</button>
+                    </form>
+                </div>
+            </div>
+
+            <script>
+                // Kept dependency-free on purpose (no asset bundles on these
+                // standalone pages): tab switching + the "section is full"
+                // warning. The warning is a confirm(), not a blocker - the
+                // spec wants the musician informed but still able to apply.
+                (function () {
+                    var buttons = {info: document.getElementById('btn-info'),
+                                   form: document.getElementById('btn-form')};
+                    var panels = {info: document.getElementById('tab-info'),
+                                  form: document.getElementById('tab-form')};
+                    function activate(which) {
+                        ['info', 'form'].forEach(function (key) {
+                            buttons[key].classList.toggle('active', key === which);
+                            panels[key].classList.toggle('active', key === which);
+                        });
+                    }
+                    buttons.info.addEventListener('click', function () { activate('info'); });
+                    buttons.form.addEventListener('click', function () { activate('form'); });
+                    // Land on the form tab after a submission (to show the
+                    // confirmation), on the info tab otherwise.
+                    activate(window.location.search.indexOf('submitted=1') === -1 ? 'info' : 'form');
+
+                    document.getElementById('reg-form').addEventListener('submit', function (event) {
+                        var select = document.getElementById('section-select');
+                        var option = select.options[select.selectedIndex];
+                        if (option) {
+                            if (option.getAttribute('data-full') === '1') {
+                                var goAhead = confirm(
+                                    'This section already has all the musicians it ' +
+                                    'needs. You can still register - the organizer ' +
+                                    'will decide. Continue?');
+                                if (!goAhead) { event.preventDefault(); }
+                            }
+                        }
+                    });
+                })();
+            </script>
+        </t>
+    </template>
+
+    <template id="page_callsheet" name="Gig Callsheet Page">
+        <t t-call="gig_manager.public_layout">
+            <t t-set="page_title" t-value="'Callsheet — %s' % project.name"/>
+
+            <t t-call="gig_manager.public_calendar"/>
+            <t t-call="gig_manager.public_programme"/>
+
+            <div class="card">
+                <h2>Participants</h2>
+                <t t-foreach="sections_with_participants" t-as="pair">
+                    <h3 t-esc="pair[0].name"/>
+                    <p t-if="not pair[1]">No one yet.</p>
+                    <ul t-if="pair[1]">
+                        <li t-foreach="pair[1]" t-as="participant"
+                            t-esc="participant.partner_id.name"/>
+                    </ul>
+                </t>
+            </div>
+
+            <t t-call="gig_manager.public_blocks"/>
+        </t>
+    </template>
+</odoo>

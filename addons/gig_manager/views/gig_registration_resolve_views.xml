@@ -1,0 +1,57 @@
+<odoo>
+    <record id="view_gig_registration_resolve_form" model="ir.ui.view">
+        <field name="name">gig.registration.resolve.form</field>
+        <field name="model">gig.registration.resolve</field>
+        <field name="arch" type="xml">
+            <form>
+                <field name="registration_id" invisible="1"/>
+                <field name="name_differs" invisible="1"/>
+                <field name="email_differs" invisible="1"/>
+                <field name="phone_differs" invisible="1"/>
+                <group string="Form Data">
+                    <field name="reg_name"/>
+                    <field name="reg_email"/>
+                    <field name="reg_phone"/>
+                </group>
+                <group string="Possible Matches">
+                    <field name="candidate_ids" nolabel="1" colspan="2">
+                        <list>
+                            <field name="name"/>
+                            <field name="email"/>
+                            <field name="phone"/>
+                        </list>
+                    </field>
+                </group>
+                <group>
+                    <field name="partner_id"/>
+                </group>
+                <!-- One row per genuinely conflicting field: the existing value
+                     for reference, and the mandatory keep/replace decision.
+                     Fields where one side is empty never show up here - the
+                     link action fills those in silently (missing data is not
+                     a conflict). -->
+                <group string="Conflicts to Resolve"
+                       invisible="not name_differs and not email_differs and not phone_differs">
+                    <field name="partner_name" invisible="not name_differs"/>
+                    <field name="name_choice" invisible="not name_differs"
+                           required="name_differs"/>
+                    <field name="partner_email" invisible="not email_differs"/>
+                    <field name="email_choice" invisible="not email_differs"
+                           required="email_differs"/>
+                    <field name="partner_phone" invisible="not phone_differs"/>
+                    <field name="phone_choice" invisible="not phone_differs"
+                           required="phone_differs"/>
+                </group>
+                <footer>
+                    <button name="action_link_contact" type="object"
+                            string="Link Contact" class="btn-primary"
+                            invisible="not partner_id"/>
+                    <button name="action_create_contact" type="object"
+                            string="Create New Contact"
+                            invisible="partner_id"/>
+                    <button string="Cancel" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

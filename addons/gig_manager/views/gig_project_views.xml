@@ -27,6 +27,19 @@
                                 class="oe_stat_button" icon="fa-users">
                             <field name="attendance_count" widget="statinfo" string="Attendance"/>
                         </button>
+                        <button type="object" name="action_view_registrations"
+                                class="oe_stat_button" icon="fa-inbox">
+                            <field name="pending_registration_count" widget="statinfo"
+                                   string="Pending Reg."/>
+                        </button>
+                        <!-- act_url buttons: quick access to what the public /
+                             the participants actually see, in a new browser tab. -->
+                        <button type="object" name="action_open_registration_page"
+                                class="oe_stat_button" icon="fa-globe"
+                                string="Reg. Page"/>
+                        <button type="object" name="action_open_callsheet_page"
+                                class="oe_stat_button" icon="fa-file-text-o"
+                                string="Callsheet"/>
                     </div>
                     <group>
                         <field name="name"/>
@@ -79,6 +92,31 @@
                                     <field name="status"/>
                                     <field name="comment"/>
                                 </list>
+                            </field>
+                        </page>
+                        <!-- decoration-info marks the *shared* blocks (shown on both
+                             public pages from the same record): the requirement is
+                             that the editor makes them recognizable, and the two
+                             checkbox columns spell out the exact split.
+                             open_form_view: the HTML content needs the full form
+                             modal - an inline cell can't host the html editor. -->
+                        <page string="Public Pages" name="public_pages">
+                            <field name="page_block_ids">
+                                <list editable="bottom" open_form_view="1"
+                                      decoration-info="on_registration and on_callsheet">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="title"/>
+                                    <field name="on_registration"/>
+                                    <field name="on_callsheet"/>
+                                </list>
+                                <form>
+                                    <group>
+                                        <field name="title"/>
+                                        <field name="on_registration"/>
+                                        <field name="on_callsheet"/>
+                                    </group>
+                                    <field name="content" widget="html"/>
+                                </form>
                             </field>
                         </page>
                     </notebook>

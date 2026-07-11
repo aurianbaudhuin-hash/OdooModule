@@ -10,6 +10,8 @@ from . import gig_section_instrument
 from . import gig_section_group_line
 from . import gig_project
 from . import gig_project_participant
+from . import gig_registration
+from . import gig_page_block
 from . import gig_partner_instrument
 from . import gig_attendance
 from . import res_partner
