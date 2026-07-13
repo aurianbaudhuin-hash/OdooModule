@@ -3,18 +3,14 @@ from odoo.http import request
 
 
 class GigWebsiteController(http.Controller):
-    """Public pages for a project: the registration page (info + form)
-    and the participants' callsheet.
+    """Public pages: registration (info + form) and callsheet.
 
-    Everything here runs as the public user and reads business data via
-    sudo(): the module's ACLs deliberately grant nothing outside
-    base.group_user (portal/public users must not browse gig data
-    through the ORM at large), so these controllers are the *only*
-    public surface, and they expose exactly the values the templates
-    render - nothing more. That's also why the templates are plain
-    standalone QWeb rather than website-module pages: no dependency on
-    the website builder, the organizer authors custom content as
-    gig.page.block records in the backend instead.
+    Everything runs as the public user and reads data via sudo() - the
+    ACLs grant nothing outside base.group_user, so these routes are the
+    only public surface and they expose exactly what the templates
+    render. Templates are standalone QWeb on purpose: no website module
+    dependency, the organizer writes custom content as gig.page.block
+    records in the backend instead of a frontend page builder.
     """
 
     def _get_project(self, project_id):
@@ -22,16 +18,13 @@ class GigWebsiteController(http.Controller):
         return project if project.exists() else None
 
     def _common_page_values(self, project):
-        """Values shared by both public pages: the always-present
-        programme + calendar (rendered from business data, per the
-        'by default' requirement) - custom blocks are filtered per page
-        by each route."""
+        # both pages show the programme and the calendar; 
+        # custom blocks are filtered per page by each route
         return {
             'project': project,
             'pieces': project.piece_ids,
-            # sorted() and not an _order change: chronology is what a
-            # visitor expects from a calendar, but the model's default
-            # ordering elsewhere in the backend is not this page's call.
+            # sorted() here, not an _order change - chronology is what
+            # a visitor expects, backend lists are another story
             'events': project.gig_ids.sorted(
                 key=lambda e: (e.event_date, e.start_time)
             ),
@@ -50,10 +43,9 @@ class GigWebsiteController(http.Controller):
                 lambda e: e.event_type == 'rehearsal'
             ).sorted(key=lambda e: (e.event_date, e.start_time)),
             'section_fill': project._get_section_fill(),
-            # After a successful POST we redirect back here with
-            # ?submitted=1 instead of rendering a response to the POST
-            # itself (POST/redirect/GET) - so a browser refresh on the
-            # thank-you state can't resubmit the form.
+            # POST/redirect/GET: the submit route redirects back here
+            # with ?submitted=1, so refreshing the thank-you state
+            # can't resubmit the form
             'submitted': bool(submitted),
         })
         return request.render('gig_manager.page_registration', values)
@@ -71,10 +63,9 @@ class GigWebsiteController(http.Controller):
         except ValueError:
             section_id = 0
         sections = project.section_group_id.line_ids.section_id
-        # Server-side validation even though the form marks the fields
-        # required: a public endpoint must assume hand-crafted POSTs.
-        # The section check also feeds the model constraint a valid id
-        # instead of letting browse() blow up on garbage.
+        # the form marks these required, but hand-crafted POSTs won't
+        # care - validate again here (and the section check keeps
+        # garbage ids away from the model constraint)
         if not name or not email or section_id not in sections.ids:
             return request.redirect('/gig/%d/register' % project.id)
         attendance_commands = []
@@ -104,9 +95,9 @@ class GigWebsiteController(http.Controller):
         values = self._common_page_values(project)
         values.update({
             'blocks': project.page_block_ids.filtered('on_callsheet'),
-            # Participants grouped by section, in the group's own
-            # drag-handle order - the one place that ordering is
-            # user-visible outside the backend.
+            # participants grouped by section, in the group's drag
+            # order - the one place that ordering shows outside the
+            # backend
             'sections_with_participants': [
                 (line.section_id, project.participant_ids.filtered(
                     lambda p: p.section_id == line.section_id))

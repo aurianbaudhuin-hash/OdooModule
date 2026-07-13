@@ -3,14 +3,12 @@ from odoo.exceptions import UserError, ValidationError
 
 
 class GigProject(models.Model):
-    """A tour or concert series: the top-level container for a set of
-    events (rehearsals/concerts), a programme of pieces, and the
-    musicians participating (each registered in a section).
+    """A tour or concert series: events, a programme, and the musicians
+    participating (each registered in a section).
 
-    Workflow this model is built around: events are created first by the
-    organizer, and participants are added to the project afterwards. See
-    gig.project.participant.create() for the consequence that has on
-    attendance tracking.
+    Assumed workflow: the organizer plans the events first, musicians
+    join afterwards - see gig.project.participant.create() for what
+    that implies on attendance.
     """
     _name = 'gig.project'
     _description = 'Tour or concert series'
@@ -20,17 +18,14 @@ class GigProject(models.Model):
     section_group_id = fields.Many2one(
         comodel_name='gig.section.group',
         string="Section group",
-        # Every project must declare which ensemble layout it needs -
-        # exactly one. 'restrict' (not 'cascade') because the group is
-        # shared reference data, like composer_id on gig.piece: deleting
-        # a layout that live projects still rely on must be blocked.
+        # exactly one ensemble layout per project. restrict, not
+        # cascade: the group is shared reference data (same reasoning
+        # as composer_id on gig.piece).
         #
-        # NB: on a database that already contains projects, Odoo cannot
-        # apply the NOT NULL column constraint until every existing row
-        # has been given a group (it logs an error and skips it, while
-        # the ORM still enforces required= for anything created or
-        # edited from then on). Assign a group to legacy projects, then
-        # re-run -u gig_manager to get the DB-level guarantee too.
+        # NB on existing DBs: postgres refuses the NOT NULL while old
+        # rows have no group (odoo logs it and moves on, the ORM still
+        # enforces required= on new writes). Assign groups to legacy
+        # projects, then re-run -u to get the DB constraint too.
         required=True,
         ondelete='restrict',
     )
@@ -56,10 +51,8 @@ class GigProject(models.Model):
 
     piece_ids = fields.Many2many(
         comodel_name='gig.piece',
-        # Explicit relation/column1/column2 so this M2M and
-        # gig.piece.project_ids share the exact same pivot table and can
-        # be queried/filtered from either side (this codebase's
-        # convention for any M2M needing bidirectional access).
+        # explicit pivot so gig.piece.project_ids maps onto the same
+        # table and the relation is queryable from both sides
         relation='gig_project_piece_rel',
         column1='project_id',
         column2='piece_id',
@@ -67,10 +60,9 @@ class GigProject(models.Model):
     )
 
     participant_ids = fields.One2many(
-        # A One2many of registration records, not an M2M of partners:
-        # every musician on a project must be registered in a section,
-        # and a bare M2M row has nowhere to carry that section - see
-        # gig.project.participant's docstring for the full story.
+        # registration records, not a bare M2M to res.partner: each
+        # musician carries their section, an M2M row has nowhere to
+        # put that (see gig.project.participant)
         comodel_name='gig.project.participant',
         inverse_name='project_id',
         string="Participants",
@@ -78,10 +70,9 @@ class GigProject(models.Model):
 
     attendance_ids = fields.One2many(
         comodel_name='gig.attendance',
-        # gig.attendance.project_id is itself a related/stored field
-        # (derived from event_id.project_id), not a plain Many2one - but
-        # since it's store=True it's a real column, so it works as a
-        # one2many inverse exactly like an ordinary Many2one would.
+        # the inverse here is a related/stored field on gig.attendance,
+        # not a plain M2O - works fine as an O2M inverse because
+        # store=True makes it a real column
         inverse_name='project_id',
         string="Attendance",
     )
@@ -110,12 +101,9 @@ class GigProject(models.Model):
 
     @api.depends('gig_ids.event_date', 'gig_ids.event_type')
     def _compute_dates(self):
-        """start_date/end_date intentionally aren't a simple min/max
-        across every event: start_date is the earliest *rehearsal* date
-        and end_date is the latest *concert* date, matching the intended
-        "rehearse first, then perform" lifecycle of a project. A project
-        with no matching events on one side (e.g. no rehearsals yet)
-        gets False for that date rather than an arbitrary fallback.
+        """Not a plain min/max over all events: start = earliest
+        *rehearsal*, end = latest *concert* ("rehearse first, then
+        perform"). No events on one side -> False, no made-up fallback.
         """
         for project in self:
             rehearsal_dates = project.gig_ids.filtered(
@@ -130,13 +118,10 @@ class GigProject(models.Model):
 
     @api.depends('attendance_ids')
     def _compute_attendance_count(self):
-        # search_count() re-reads the DB every call, but the *cached result*
-        # of this compute is only invalidated when a listed dependency
-        # changes. attendance_ids is the real O2M behind those attendance
-        # rows, so depending on it keeps the badge accurate right after
-        # write() (below) creates new attendance lines in the same
-        # transaction - without this, the count would look stale until the
-        # next request re-triggers the compute from scratch.
+        # the depends on attendance_ids is what keeps the badge fresh
+        # right after a registration creates attendance rows in the
+        # same transaction - without it the cached value stayed stale
+        # until the next request (had that bug, there's a test now)
         for project in self:
             project.attendance_count = self.env['gig.attendance'].search_count(
                 [('project_id', '=', project.id)]
@@ -144,26 +129,22 @@ class GigProject(models.Model):
 
     @api.depends('registration_ids.state')
     def _compute_pending_registration_count(self):
-        # Counts only 'pending': the smart button is a to-do badge for
-        # the organizer ("N requests waiting on you"), not an archive
-        # counter - accepted/rejected ones are still reachable through
-        # the same button, just not worth a number.
+        # pending only - this badge is a to-do counter, the accepted/
+        # rejected ones are still behind the same button
         for project in self:
             project.pending_registration_count = len(
                 project.registration_ids.filtered(lambda r: r.state == 'pending')
             )
 
     def _get_section_fill(self):
-        """Map each section of this project's group to its occupancy:
-        {section: {'count': confirmed participants, 'capacity': required
-        headcount, 'full': bool}}. Only *accepted* participants count -
-        pending registrations reserve nothing, otherwise a burst of
-        requests the organizer later rejects would scare real
-        candidates away from a section that is actually open.
+        """Occupancy per section of this project's group:
+        {section: {'count', 'capacity', 'full'}}.
 
-        Lives on the model (not in the website controller) because
-        "is this section full?" is a business question, and this way
-        backend features can reuse the same definition later.
+        Counts accepted participants only. Pending registrations
+        reserve nothing - a pile of requests I might reject shouldn't
+        scare candidates away from an open section. On the model rather
+        than in the controller because "is this section full" is a
+        business question.
         """
         self.ensure_one()
         fill = {}
@@ -181,8 +162,8 @@ class GigProject(models.Model):
         return fill
 
     def action_view_registrations(self):
-        """Open this project's registrations (all states - the domain
-        filters by project, the list's own filters handle the rest)."""
+        # no state filter here, the list's own filters take it from
+        # there
         self.ensure_one()
         action = self.env['ir.actions.act_window']._for_xml_id(
             'gig_manager.action_gig_registration'
@@ -192,22 +173,18 @@ class GigProject(models.Model):
         return action
 
     def get_callsheet_url(self):
-        """Absolute URL of this project's public callsheet, for use in
-        emails: a mail is read outside the web client, so the relative
-        paths the act_url buttons use are not enough - get_base_url()
-        resolves the host from web.base.url without hardcoding it."""
+        # absolute URL for emails - relative paths are dead in a mail
+        # client. get_base_url() reads web.base.url, no hardcoded host.
         self.ensure_one()
         return "%s/gig/%d/callsheet" % (self.get_base_url(), self.id)
 
     def action_notify_callsheet_update(self):
         """Email every participant that the callsheet changed.
 
-        One mail per musician (the template reads the recipient from
-        the sending context) rather than a single mail with everyone in
-        copy: participants should not see each other's addresses.
-        Participants without an email address are skipped, not fatal -
-        the organizer is told how many were reached either way, and an
-        all-skipped send raises instead of pretending it worked.
+        One mail per musician (template reads the recipient from the
+        context) so nobody sees the other addresses. Musicians without
+        an email get skipped; all-skipped raises instead of pretending
+        the orchestra was notified.
         """
         self.ensure_one()
         template = self.env.ref('gig_manager.mail_template_callsheet_updated')
@@ -249,13 +226,9 @@ class GigProject(models.Model):
         }
 
     def action_view_attendance(self):
-        """Open the shared gig.attendance list, scoped to this project.
-
-        Complements (doesn't replace) the inline "Attendance" tab on this
-        project's own form: this action offers the richer, filterable/
-        groupable cross-event view (grouped by event by default, with
-        Present/Absent/Uncertain filters), whereas the inline tab is for
-        quick at-a-glance editing without leaving the project.
+        """Smart button: the shared attendance list scoped to this
+        project. Complements the inline tab - this one has the filters
+        and group-bys, the tab is for quick edits in place.
         """
         self.ensure_one()
         action = self.env['ir.actions.act_window']._for_xml_id(
@@ -267,14 +240,10 @@ class GigProject(models.Model):
 
     @api.constrains('section_group_id')
     def _check_participants_sections_in_group(self):
-        """Mirror image of gig.project.participant's own constraint
-        (section must belong to the project's group): that one fires
-        when a *registration* is created or edited, but @api.constrains
-        only reacts to fields of its own model - so swapping this
-        project's section group out from under existing registrations
-        would slip past it entirely. This side covers that hole: a
-        group change is only valid if every registered musician's
-        section still exists in the new layout.
+        """Mirror of the check on gig.project.participant. That one only
+        fires when a registration's own fields change - swapping the
+        *project's* group out from under existing registrations would
+        slip right past it, so this side has to exist too.
         """
         for project in self:
             stray = project.participant_ids.filtered(

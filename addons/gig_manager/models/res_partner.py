@@ -2,16 +2,12 @@ from odoo import models, fields, api
 
 
 class ResPartner(models.Model):
-    """Extends Odoo's standard contact with the gig_manager-specific
-    relations: which instruments a contact plays, which projects they
-    participate in (via their registrations), and their attendance
-    history.
+    """Extends the standard contact with the gig side: instruments
+    played, project registrations, attendance history.
 
-    Nothing is stored here - every field below is either a pure inverse
-    of a relation defined on the other side (gig.partner.instrument,
-    gig.project.participant, gig.attendance) or derived from one - so
-    this file only ever needs to change if a new relation to
-    res.partner is introduced elsewhere in the module.
+    Nothing is stored here - everything below is an inverse of a
+    relation defined elsewhere, or derived from one. This file only
+    changes when a new relation to res.partner appears in the module.
     """
     _inherit = 'res.partner'
 
@@ -27,13 +23,11 @@ class ResPartner(models.Model):
     )
     gig_project_ids = fields.Many2many(
         comodel_name='gig.project',
-        # Computed, not a stored pivot table: this used to share
-        # gig_project_partner_rel with gig.project.participant_ids, but
-        # participation was promoted from a plain M2M to a real model
-        # (gig.project.participant, carrying the musician's section) -
-        # so "which projects is this contact on" is now *derived* from
-        # their registrations rather than being its own relation that
-        # could drift out of sync with them.
+        # computed, no pivot table: this used to share
+        # gig_project_partner_rel with the project-side M2M, but
+        # participation got promoted to a real model (section per
+        # musician) - so "which projects" is now derived from the
+        # registrations instead of a second relation that could drift.
         compute='_compute_gig_project_ids',
         string="Gig Projects",
     )

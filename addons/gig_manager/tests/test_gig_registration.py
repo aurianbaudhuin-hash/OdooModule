@@ -22,8 +22,8 @@ class TestGigRegistration(TransactionCase):
         super().setUpClass()
         cls.violin = cls.env['gig.instrument'].create(
             {'name': 'Test Fixture Web Violin'})
-        # Capacity of 2 on purpose: small enough for the fill tests to
-        # saturate it with two participants.
+        # capacity of 2: small enough for the fill tests to saturate
+        # it with two participants
         cls.section = cls.env['gig.section'].create({
             'name': 'Test Fixture Web Strings',
             'instrument_line_ids': [
@@ -91,9 +91,8 @@ class TestGigRegistration(TransactionCase):
     # ------------------------------------------------------------------
 
     def test_candidates_include_same_email_case_insensitive(self):
-        """Hard requirement: every contact with the same email MUST be
-        found. Emails are case-insensitive identifiers, so a case
-        difference must not hide the match."""
+        # emails are case-insensitive identifiers, a case difference
+        # must not hide the match
         partner = self.env['res.partner'].create({
             'name': 'Unrelated Name',
             'email': 'WEB.MUSICIAN@example.com',
@@ -131,9 +130,7 @@ class TestGigRegistration(TransactionCase):
     # ------------------------------------------------------------------
 
     def test_accept_without_partner_raises(self):
-        """Acceptance creates business records (participant +
-        attendance) that need an unambiguous contact - so it must be
-        impossible before the resolve step has linked one."""
+        # no accepting before the resolve step linked a contact
         registration = self._create_registration()
         with self.assertRaises(UserError):
             registration.action_accept()
@@ -257,10 +254,8 @@ class TestGigRegistration(TransactionCase):
         self.assertEqual(partner.phone, '+32 470 12 34 56')
 
     def test_create_contact_links_new_partner(self):
-        """The create path: a brand-new contact built from the form
-        data, linked to the registration, and handed back as a form
-        action so the organizer can complete it (instruments etc. -
-        data the public form deliberately doesn't ask for)."""
+        # the create path: new contact from the form data, linked, and
+        # handed back as a form action so the organizer can complete it
         registration = self._create_registration()
         wizard = self._make_wizard(registration)
         action = wizard.action_create_contact()

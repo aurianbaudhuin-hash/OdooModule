@@ -2,64 +2,52 @@ from odoo import models, fields
 
 
 class GigSectionGroupLine(models.Model):
-    """Ordered through-model between gig.section.group and gig.section:
-    one row = "this section appears in this group, at this position".
+    """Through-model group <-> section: "this section, in this group,
+    at this position".
 
-    A plain Many2many could link groups to shared sections, but it has
-    nowhere to put a per-group position - and a One2many with the
-    sequence on gig.section itself would force each section to belong
-    to exactly one group, killing reuse. The through-model is the only
-    shape that gives both: sections stay shared reference data, and
-    each group orders its own lines independently. (This is the same
-    pattern CLAUDE.md earmarks for ordering a project's programme.)
+    Why not a plain M2M: nowhere to put the per-group position. Why not
+    sequence on the section itself: that would tie each section to one
+    group and kill reuse. So: through-model. (Same pattern would apply
+    to ordering a project's programme someday.)
 
-    Per this codebase's convention for link models, no menu of its own:
-    lines are only ever edited inside the group's form.
+    Link model, no menu - edited inside the group's form only.
     """
     _name = 'gig.section.group.line'
     _description = 'Section within a section group, with its position'
-    # 'sequence, id' is the standard Odoo pattern for a user-orderable
-    # One2many: the group's form exposes a drag handle on sequence, and
-    # the 'id' tie-breaker keeps ordering deterministic between rows
-    # that still share the same sequence value.
+    # standard recipe for handle-ordered lines; id as tie-breaker for
+    # rows still sharing the default sequence
     _order = 'sequence, id'
 
     sequence = fields.Integer(
         string="Sequence",
-        # default=10 is the usual Odoo convention for handle-ordered
-        # lines; users never type this number - dragging rows in the
-        # group's form rewrites it.
+        # nobody types this - the drag handle in the group form
+        # rewrites it
         default=10,
     )
     group_id = fields.Many2one(
         comodel_name='gig.section.group',
         string="Section group",
         required=True,
-        # 'cascade': a position entry has no meaning without the group
-        # it orders - deleting the group deletes its lines (but NOT the
-        # shared sections they point at, see section_id below).
+        # cascade: a position entry dies with its group...
         ondelete='cascade',
     )
     section_id = fields.Many2one(
         comodel_name='gig.section',
         string="Section",
         required=True,
-        # 'restrict': gig.section is shared reference data - deleting a
-        # section that some group's layout still includes must be
-        # blocked, not silently rewrite that group's composition.
+        # ...but never takes the shared section down with it - other
+        # groups may still use it, hence restrict on this side
         ondelete='restrict',
     )
-    # Related, not computed: the headcount is a property of the section
-    # itself; this line only re-exposes it so the group's list can show
-    # per-section totals without a click-through.
+    # related, not computed: the headcount belongs to the section, this
+    # just surfaces it in the group's list
     musician_count = fields.Integer(
         related='section_id.musician_count',
         string="Musicians",
     )
 
     _sql_constraints = [
-        # The same section twice in one group would be an ambiguous
-        # duplicate (and would double-count its headcount).
+        # same section twice in a group = double-counted headcount
         ('group_section_unique', 'unique(group_id, section_id)',
          "This group already contains this section."),
     ]

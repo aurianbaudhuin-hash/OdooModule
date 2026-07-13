@@ -2,13 +2,9 @@ from odoo import models, fields
 
 
 class GigMovement(models.Model):
-    """Reference list of artistic/musical movements (Baroque, Classical,
-    Romantic, Impressionist...).
-
-    Same shape and same reasoning as `gig.instrument` and
-    `gig.piece.type`: a controlled vocabulary, this time for
-    `gig.composer.movement_id`, so a composer's stylistic period is
-    picked from a fixed list rather than typed freely.
+    """Lookup table for artistic movements (Baroque, Romantic,
+    Impressionist...), used by gig.composer.movement_id. Same idea as
+    gig.instrument.
     """
     _name = 'gig.movement'
     _description = 'Artistic movement / musical style (Baroque, Romantic, etc.)'

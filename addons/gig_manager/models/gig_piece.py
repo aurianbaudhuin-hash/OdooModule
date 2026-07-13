@@ -3,9 +3,7 @@ from odoo.exceptions import ValidationError
 
 
 class GigPiece(models.Model):
-    """A single musical work (e.g. a symphony, a concerto movement) that
-    can be programmed into one or more projects/tours.
-    """
+    """A musical work, programmable into any number of projects."""
     _name = 'gig.piece'
     _description = 'Musical piece'
     _order = 'title'
@@ -15,9 +13,8 @@ class GigPiece(models.Model):
         comodel_name='gig.composer',
         string="Composer",
         required=True,
-        # 'restrict': a composer with pieces attached must not be
-        # deletable - the piece would either be orphaned or silently
-        # destroyed, neither of which is acceptable for catalogue data.
+        # restrict: deleting a composer must not orphan/destroy their
+        # pieces
         ondelete='restrict',
     )
     composition_year = fields.Integer(string="Composition Year", required=True)
@@ -33,11 +30,8 @@ class GigPiece(models.Model):
     )
     project_ids = fields.Many2many(
         comodel_name='gig.project',
-        # Explicit relation/column1/column2 (rather than letting Odoo
-        # auto-generate them) so this M2M and gig.project.piece_ids both
-        # point at the exact same pivot table and can be queried from
-        # either side - this codebase's convention for any M2M that needs
-        # to be filtered/joined from both models.
+        # explicit relation/columns so this and gig.project.piece_ids
+        # share the same pivot table (queryable from both sides)
         relation='gig_project_piece_rel',
         column1='piece_id',
         column2='project_id',
@@ -46,18 +40,14 @@ class GigPiece(models.Model):
 
     @api.constrains('composition_year', 'composer_id')
     def _check_composition_year(self):
-        """A piece cannot have been composed before its composer was born,
-        or after they died.
+        """Composition year must fall within the composer's lifespan
+        (when we know it).
 
-        The guard below (`if not piece.composition_year or not
-        piece.composer_id: continue`) means this check is skipped
-        whenever composition_year is falsy - which includes 0, not just
-        an actually-empty value. In practice 0 is never a real
-        composition year, so this is a harmless quirk rather than a bug
-        worth fixing, but it's worth knowing: composition_year=0 silently
-        bypasses this constraint regardless of the composer's lifespan.
-        It's also skipped whenever the composer's birth_date/death_date
-        aren't set, since there's nothing to compare against then.
+        NB: the falsy-check below also skips composition_year == 0.
+        0 is never a real year, so not worth special-casing, but keep
+        it in mind: year 0 silently bypasses this constraint.
+        Compare .year to the int, not the Date object to an int -
+        already got bitten by that once.
         """
         for piece in self:
             if not piece.composition_year or not piece.composer_id:
@@ -85,13 +75,9 @@ class GigPiece(models.Model):
 
     @api.depends('title', 'composer_id.full_name')
     def _compute_display_name(self):
-        """Renders as "Composer - Title" when a composer is set, so a
-        piece is recognisable in Many2one widgets/breadcrumbs without
-        having to open it; falls back to just the title when there's no
-        composer yet (e.g. a piece being filled in). The dotted dependency
-        `composer_id.full_name` means renaming the composer correctly
-        refreshes this piece's display_name too, not just changing
-        composer_id itself.
+        """"Composer - Title" in dropdowns, just the title while no
+        composer is set yet. The dotted dependency matters: renaming a
+        composer has to refresh their pieces' labels too.
         """
         for piece in self:
             if piece.composer_id:

@@ -3,16 +3,13 @@ from odoo.exceptions import ValidationError
 
 
 class GigSection(models.Model):
-    """One section of an ensemble ("First violin", "Flute & Piccolo"...),
-    made up of one or more instruments, each with a required headcount.
+    """An ensemble section ("First violin", "Flute & Piccolo"...): one
+    or more instruments, each with a headcount.
 
-    A section is shared reference data, like gig.instrument: it is
-    defined once and can appear in any number of section groups ("First
-    violin = 12 players" can serve both a "Symphony Orchestra" and an
-    "Opera Pit" layout). The section does NOT know its position in any
-    group - ordering is a property of the (group, section) pair, so it
-    lives on gig.section.group.line, the ordered through-model that
-    ties the two together.
+    Sections are shared reference data - defined once, usable in any
+    number of section groups. That's why there's no group_id/sequence
+    here: the position of a section is a property of the (group,
+    section) pair and lives on gig.section.group.line.
     """
     _name = 'gig.section'
     _description = 'Ensemble section (instruments with required headcount)'
@@ -26,10 +23,9 @@ class GigSection(models.Model):
         string="Instruments",
     )
 
-    # Inverse of the group/section through-model. Mostly here so views
-    # and code can ask "which groups use this section?" - e.g. the
-    # project form filters selectable sections with a dotted domain on
-    # this field ([('group_line_ids.group_id', '=', ...)]).
+    # inverse of the group/section through-model. Mainly here so views
+    # can filter "sections of this project's group" with a dotted
+    # domain on it.
     group_line_ids = fields.One2many(
         comodel_name='gig.section.group.line',
         inverse_name='section_id',
@@ -51,20 +47,15 @@ class GigSection(models.Model):
 
     @api.constrains('name', 'instrument_line_ids')
     def _check_has_instrument_lines(self):
-        """A section is *defined* as one or more instruments with a
-        headcount, so an empty section is invalid data, not just an
-        unfinished form. Per this codebase's convention the guarantee
-        lives here at the model level - the form merely makes it
-        convenient to fill the lines in, and a view could never enforce
-        this against imports or other code anyway.
+        """A section with no instruments is not a section. Enforced here
+        and not just in the form, imports/code don't go through forms.
 
-        'name' is deliberately listed in the decorator even though the
-        check never reads it: @api.constrains only fires for fields
-        actually present in the create/write vals, so a constraint on
-        instrument_line_ids alone would never run for a section created
-        *without* that key - precisely the case it must catch. Since
-        name is required, it appears in every create's vals, which
-        guarantees this check runs on every new section.
+        Why 'name' is in the decorator: constrains only fire for fields
+        present in the create/write vals, so a create *without*
+        instrument_line_ids would never trigger a check on that field
+        alone - exactly the case to catch. name is required, so it's in
+        every create, which guarantees this runs. Found out via a
+        failing test.
         """
         for section in self:
             if not section.instrument_line_ids:
@@ -75,9 +66,7 @@ class GigSection(models.Model):
                 ))
 
     _sql_constraints = [
-        # Global uniqueness, like the other reference-data models: since
-        # sections are shared across groups, two sections with the same
-        # name would be indistinguishable in every dropdown that offers
-        # them (group lines, project participant registration).
+        # global uniqueness: sections are shared, two "First Violin"s
+        # would be indistinguishable in every dropdown
         ('name_unique', 'unique(name)', "This section already exists."),
     ]

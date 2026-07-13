@@ -4,23 +4,17 @@ from odoo.osv import expression
 
 
 def _phone_digits(phone):
-    """Reduce a phone number to its digits, for format-tolerant
-    comparison ("+32 470 12 34 56" vs "0470/12.34.56"). Module-level
-    helper rather than a model method: it has no dependency on any
-    record, and both this model and its tests use it.
-    """
+    # digits only, so "+32 470 12 34 56" and "0470/12.34.56" become
+    # comparable. Module-level: the wizard and the tests use it too.
     return ''.join(ch for ch in (phone or '') if ch.isdigit())
 
 
 def _phones_match(phone_a, phone_b):
-    """True when two phone numbers plausibly denote the same line.
-
-    Comparing raw strings would miss every formatting variant, and full
-    international normalization (country prefixes etc.) is a rabbit
-    hole this module doesn't need - so the middle ground: compare the
-    last 9 digits (the subscriber part in most numbering plans), which
-    makes "+32 470 12 34 56" match "0470 12 34 56". At least 6 digits
-    are required on both sides so short garbage can't match everything.
+    """Same line, probably. Raw string comparison misses every
+    formatting variant, and real international normalization is a
+    rabbit hole - comparing the last 9 digits (subscriber part in most
+    plans) handles the +32 vs 0 prefix case well enough. Minimum 6
+    digits on both sides so short garbage can't match everything.
     """
     digits_a, digits_b = _phone_digits(phone_a), _phone_digits(phone_b)
     if len(digits_a) < 6 or len(digits_b) < 6:
@@ -29,17 +23,14 @@ def _phones_match(phone_a, phone_b):
 
 
 class GigRegistration(models.Model):
-    """A musician's registration request submitted through a project's
-    public web form.
+    """A registration request from the public form.
 
-    This is deliberately a *staging* record, not a direct write into
-    gig.project.participant: a real participant row needs a res.partner,
-    and the public form intentionally doesn't know whether the person
-    typing already exists in the database (possibly under an old email
-    address). So the raw form data lands here in state 'pending', the
-    organizer resolves it to a contact (see gig.registration.resolve),
-    and only an explicit Accept turns it into a participant + attendance
-    rows. Rejected registrations keep their data for the record.
+    Staging record, not a direct write into gig.project.participant: a
+    real participant needs a res.partner, and the person typing might
+    already exist in the DB under an old email. So the raw form data
+    lands here as 'pending', the organizer resolves it to a contact
+    (gig.registration.resolve) and then accepts or rejects. Rejected
+    ones keep their data.
     """
     _name = 'gig.registration'
     _description = 'Public registration request for a project'
@@ -49,8 +40,6 @@ class GigRegistration(models.Model):
         comodel_name='gig.project',
         string="Project",
         required=True,
-        # 'cascade': a registration request has no meaning without the
-        # project it applies to.
         ondelete='cascade',
     )
     name = fields.Char(string="Name", required=True)
@@ -60,7 +49,6 @@ class GigRegistration(models.Model):
         comodel_name='gig.section',
         string="Section",
         required=True,
-        # 'restrict': shared reference data, same as everywhere else.
         ondelete='restrict',
     )
     attendance_line_ids = fields.One2many(
@@ -81,22 +69,18 @@ class GigRegistration(models.Model):
     partner_id = fields.Many2one(
         comodel_name='res.partner',
         string="Matched Contact",
-        # The organizer sets this via the resolve wizard, never by hand
-        # on the form (readonly in the view): it must go through the
-        # duplicate search / conflict resolution flow.
-        # 'set null': if the contact disappears before acceptance, the
-        # registration simply becomes unresolved again.
+        # set through the resolve wizard only (readonly in the view) -
+        # picking it by hand would skip the duplicate search and the
+        # conflict handling. set null: contact gone before acceptance
+        # just means the registration is unresolved again.
         ondelete='set null',
     )
 
     @api.constrains('project_id', 'section_id')
     def _check_section_in_project_group(self):
-        """Same rule as gig.project.participant: the requested section
-        must exist in the project's ensemble layout. The public form
-        only offers valid sections, but per this codebase's convention
-        that's UX only - this also shields against forged POST data,
-        which a public endpoint must assume will happen.
-        """
+        # same rule as on gig.project.participant. The public form only
+        # offers valid sections, but a public endpoint will get forged
+        # POSTs eventually - this is the actual guard.
         for registration in self:
             group = registration.project_id.section_group_id
             if registration.section_id not in group.line_ids.section_id:
@@ -109,28 +93,24 @@ class GigRegistration(models.Model):
                 ))
 
     def _find_candidate_partners(self):
-        """Return contacts that plausibly are the person behind this
-        registration, for the resolve wizard to offer.
+        """Contacts that might be this person, for the resolve wizard.
 
-        The hard requirement is recall on the strong identifiers: every
-        contact with the same email or phone number MUST be found (a
-        musician who re-registers with a new email but the same phone
-        must surface their old record, and vice versa). Name matching
-        is best-effort on top: any contact whose name contains one of
-        the registered name's words (3+ letters, to keep 'de'/'la' from
-        matching half the database).
+        Hard requirement: anyone with the same email or phone MUST show
+        up (a musician re-registering with a new email but same phone
+        has to surface their old record, and vice versa). Name matching
+        is best-effort on top: any word of 3+ letters (below that,
+        'de'/'la' would match half the database).
 
-        Phone can't be matched with a search domain - the same number
-        can be stored in any format - so contacts with a phone are
-        fetched and compared digit-wise in Python. Fine at this
-        module's scale; a mass-contact deployment would precompute a
-        sanitized phone column instead.
+        Phone can't go through a search domain - the same number can be
+        stored in any format - so contacts with a phone get compared
+        digit-wise in Python. Fine at this scale; with a huge contact
+        table I'd precompute a sanitized phone column instead.
         """
         self.ensure_one()
         domains = []
         if self.email:
-            # =ilike: exact address, case-insensitive - emails are
-            # identifiers, substring matching would only add noise.
+            # =ilike: exact address, case-insensitive. Substring
+            # matching on an email would just add noise.
             domains.append([('email', '=ilike', self.email)])
         for token in (self.name or '').split():
             if len(token) >= 3:
@@ -146,7 +126,6 @@ class GigRegistration(models.Model):
         return candidates
 
     def action_open_resolve_wizard(self):
-        """Open the contact-resolution wizard for this registration."""
         self.ensure_one()
         return {
             'type': 'ir.actions.act_window',
@@ -158,15 +137,14 @@ class GigRegistration(models.Model):
         }
 
     def action_accept(self):
-        """Turn a resolved registration into a real participant row.
+        """Pending + resolved -> participant.
 
-        Gated on partner_id on purpose: acceptance is what creates
-        business records (participant + attendance), and those need an
-        unambiguous contact - which only the resolve step can provide.
-        Creating the participant fires gig.project.participant.create(),
-        which builds the 'maybe' attendance rows; the musician's actual
-        answers from the form are then copied over them, so the two
-        mechanisms compose instead of duplicating each other.
+        Gated on partner_id: accepting creates business records and
+        those need an unambiguous contact, which only the resolve step
+        gives. Creating the participant fires its create() hook (the
+        'maybe' attendance rows), then the musician's actual answers
+        from the form are written over them - the two mechanisms stack
+        instead of duplicating each other.
         """
         self.ensure_one()
         if self.state != 'pending':
@@ -211,15 +189,14 @@ class GigRegistration(models.Model):
         self._send_state_email('gig_manager.mail_template_registration_rejected')
 
     def _send_state_email(self, template_xmlid):
-        """Queue the accept/reject notification for each registration.
+        """Queue the accept/reject notification.
 
-        force_send is left at its default (False) on purpose: the mail
-        lands in Odoo's outgoing queue and the mail cron delivers it -
-        so a missing or misconfigured SMTP server can never make the
-        accept/reject action itself fail. The templates are looked up
-        by xmlid with raise_if_not_found=False for the same reason: a
-        deleted template shouldn't block the workflow, the state change
-        is the business action, the email is a courtesy.
+        force_send stays at its default (False): the mail goes to the
+        outgoing queue and the cron delivers - a broken SMTP setup
+        should never make accept/reject fail. Same idea behind
+        raise_if_not_found=False: the state change is the business
+        action, the email is a courtesy, a deleted template shouldn't
+        block anything.
         """
         template = self.env.ref(template_xmlid, raise_if_not_found=False)
         if not template:
@@ -229,10 +206,9 @@ class GigRegistration(models.Model):
 
 
 class GigRegistrationAttendance(models.Model):
-    """One rehearsal RSVP inside a registration request - the staging
-    twin of gig.attendance, needed because no res.partner exists yet at
-    submission time. On acceptance these statuses are copied onto the
-    real attendance rows the participant creation generates.
+    """One rehearsal RSVP inside a registration - the staging twin of
+    gig.attendance (no res.partner exists yet at submission time). On
+    acceptance these statuses get copied onto the real rows.
     """
     _name = 'gig.registration.attendance'
     _description = 'Rehearsal availability declared on a registration'
@@ -247,13 +223,12 @@ class GigRegistrationAttendance(models.Model):
         comodel_name='gig.event',
         string="Event",
         required=True,
-        # 'cascade': an availability answer for a deleted event is
-        # meaningless, and blocking event deletion over staging data
-        # would be backwards.
+        # cascade: an answer about a deleted event is useless, and
+        # blocking event deletion over staging data would be backwards
         ondelete='cascade',
     )
-    # Same selection as gig.attendance.status on purpose: acceptance
-    # copies these values across 1:1.
+    # same selection as gig.attendance.status - acceptance copies these
+    # across 1:1
     status = fields.Selection(
         selection=[
             ('present', 'Present'),

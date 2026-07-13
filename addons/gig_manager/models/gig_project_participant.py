@@ -3,19 +3,14 @@ from odoo.exceptions import ValidationError
 
 
 class GigProjectParticipant(models.Model):
-    """Membership model: one musician's registration on one project,
-    including which section they play in.
+    """One musician's registration on one project, with their section.
 
-    This replaced the plain project<->partner Many2many the day the
-    requirement became "every musician in a project is registered in a
-    section": a bare M2M row has nowhere to carry the section, so the
-    relation had to be promoted to a real model (the same reasoning
-    that made gig.partner.instrument a model rather than an M2M between
-    partners and instruments - the 'level' needed somewhere to live).
+    Used to be a plain project<->partner M2M until the requirement
+    became "every musician plays in a section" - the link needed a
+    payload, so it became a model (same story as gig.partner.instrument
+    and its level field).
 
-    Per this codebase's convention for link models, no menu of its own:
-    registrations are only ever edited from the project's
-    "Participants" tab.
+    Link model, no menu - edited from the project's Participants tab.
     """
     _name = 'gig.project.participant'
     _description = "Musician's registration on a project, with their section"
@@ -24,42 +19,30 @@ class GigProjectParticipant(models.Model):
         comodel_name='gig.project',
         string="Project",
         required=True,
-        # 'cascade': a registration has no meaning without the project
-        # it registers for.
         ondelete='cascade',
     )
     partner_id = fields.Many2one(
         comodel_name='res.partner',
         string="Musician",
         required=True,
-        # 'cascade': same reasoning as gig.attendance.partner_id -
-        # deleting the contact should take their registrations with
-        # them, not block the deletion or leave orphaned rows.
+        # cascade: same as gig.attendance.partner_id - deleting the
+        # contact takes their registrations along
         ondelete='cascade',
     )
     section_id = fields.Many2one(
         comodel_name='gig.section',
         string="Section",
-        # Required: this field is the whole reason this model exists -
-        # a musician on a project without a section would be exactly
-        # the incomplete data this model was introduced to forbid.
+        # required - this field is the reason the model exists
         required=True,
-        # 'restrict': shared reference data other records depend on.
         ondelete='restrict',
     )
 
     @api.constrains('project_id', 'section_id')
     def _check_section_in_project_group(self):
-        """The section a musician registers in must be part of the
-        project's own ensemble layout - registering a 'First violin'
-        player on a project whose section group has no first violins
-        is a data-entry error, not a valid edge case. The view's domain
-        on section_id already filters the dropdown accordingly, but per
-        this codebase's convention that's UX only; the guarantee lives
-        here. (The mirror-image case - changing a *project's* group
-        while registrations exist - can't fire this constraint, since
-        no field of this model changes; gig.project has its own
-        @api.constrains covering that side.)
+        """The section has to exist in the project's own layout. The
+        view's domain already filters the dropdown, but that's UX -
+        this is the actual rule. (Changing the *project's* group can't
+        fire this one, gig.project has the mirror constraint for that.)
         """
         for registration in self:
             group = registration.project_id.section_group_id
@@ -74,25 +57,19 @@ class GigProjectParticipant(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
-        """Auto-create a 'maybe'-status attendance row for every
-        existing event of the project a musician registers on.
+        """Auto-create 'maybe' attendance for every existing event when
+        a musician joins.
 
-        This hook used to be a write() override on gig.project that
-        diffed old vs. new participant_ids around super().write() -
-        promoting the M2M to this model made that diffing machinery
-        unnecessary: a new registration simply *is* a create here.
-        The workflow it serves is unchanged: events are created first,
-        participants are added afterwards, so without this the
-        organizer would have to create one row per (musician, event)
-        pair by hand. There's still intentionally no equivalent hook on
-        gig.event.create() - events are never added after registration
-        has started in this workflow.
+        This used to be a write() override on gig.project diffing old
+        vs new participant_ids - once participation became its own
+        model, "someone joined" is just a create here, no diffing.
+        Still no matching hook on gig.event.create(): in this workflow
+        events are never added after registration has started.
 
-        Only *missing* (partner, event) pairs are created: attendance
-        rows deliberately survive a registration's deletion (the RSVP
-        history is still real), so re-registering a returning musician
-        must skip the rows they already have rather than tripping the
-        unique(partner_id, event_id) constraint.
+        Only the missing (partner, event) pairs get created: attendance
+        survives a registration's deletion on purpose (the RSVP history
+        is real data), so re-registering a returning musician must not
+        trip the unique constraint on the rows they already have.
         """
         registrations = super().create(vals_list)
         for registration in registrations:
@@ -108,9 +85,7 @@ class GigProjectParticipant(models.Model):
         return registrations
 
     _sql_constraints = [
-        # One registration per musician per project: a musician plays
-        # in exactly one section of a project, and a second row for the
-        # same pair would be an ambiguous duplicate.
+        # a musician plays in exactly one section of a project
         ('project_partner_unique', 'unique(project_id, partner_id)',
          "This musician is already registered on this project. "
          "Edit their existing registration instead of creating a new one."),

@@ -2,12 +2,9 @@ from odoo import models, fields
 
 
 class GigPieceType(models.Model):
-    """Reference list of musical piece categories (symphony, concerto,
-    string quartet...).
-
-    Same shape and same reasoning as `gig.instrument`: a controlled
-    vocabulary for `gig.piece.piece_type_id` so the piece catalogue stays
-    consistent instead of accumulating near-duplicate free-text values.
+    """Lookup table for piece categories (symphony, concerto, string
+    quartet...). Same idea as gig.instrument: controlled vocabulary for
+    gig.piece.piece_type_id.
     """
     _name = 'gig.piece.type'
     _description = 'Type of musical piece (symphony, concerto, etc.)'
